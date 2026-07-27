@@ -44,23 +44,15 @@ jobs:
           target: default
           arch: x86_64
           script: |
-            echo "=== 安裝 APK ==="
-            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            echo "=== 列出已安裝 App ==="
-            adb shell pm list packages | grep zcode || echo "App 未搵到"
-            echo "=== 主動啟動 App ==="
-            adb shell monkey -p com.zcode.doudizhu -c android.intent.category.LAUNCHER 1
-            echo "=== 等 App 完全載入 ==="
-            sleep 8
-            echo "=== 擷取 launch 截圖 ==="
-            adb exec-out screencap -p > /tmp/screen-launch.png
-            echo "=== 檢查 logcat 有冇 crash ==="
-            (adb logcat -d | grep -iE "FATAL|AndroidRuntime|crash" | head -20 && echo "⚠️ 有 crash") || echo "✅ 冇 crash"
-            echo "=== 等 5 秒再截圖（睇互動後畫面）==="
-            sleep 5
-            adb exec-out screencap -p > /tmp/screen-loaded.png
-            echo "=== Dump 視窗層級（確認 App 真係喺前景）==="
-            adb shell dumpsys activity activities | grep -iE "mResumedActivity|zcode" | head -3
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk &&
+            adb shell pm list packages | grep zcode &&
+            adb shell am start -n com.zcode.doudizhu/.MainActivity &&
+            sleep 12 &&
+            adb exec-out screencap -p > /tmp/screen-launch.png &&
+            (adb logcat -d | grep -iE "FATAL|AndroidRuntime" | head -10 || echo "NO_CRASH") &&
+            sleep 8 &&
+            adb exec-out screencap -p > /tmp/screen-loaded.png &&
+            adb shell dumpsys activity activities | grep -iE "mResumed|zcode" | head -3
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4

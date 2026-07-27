@@ -1,20 +1,18 @@
-name: Build Android APK
+name: Build Android APK & Signed AAB
 
 on:
   push:
     branches: [main, master]
-  workflow_dispatch:  # 手動觸發
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -32,24 +30,105 @@ jobs:
       - name: Copy web assets to native
         run: npx cap copy android
 
-      - name: Build debug APK
+      # ============================================================
+      #  Release signing（用 GitHub Secrets 入面嘅 keystore）
+      #  首次跑：如果冇 KEYSTORE_BASE64 secret，會自動生一個新 keystore
+      #  並上傳為 artifact 俾你下載備份，之後手動加做 Secret
+      # ============================================================
+      - name: Decode or generate release keystore
+        working-directory: android/app
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "=== 用現有 keystore（由 Secrets 解碼）==="
+            echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+            echo "✓ Keystore 已解碼"
+          else
+            echo "=== 冇 keystore secret，自動生成新嘅 ==="
+            KSTORE_PASS="dz$(openssl rand -hex 8)"
+            KALIAS="doudizhu"
+            KPASS="dz$(openssl rand -hex 8)"
+            keytool -genkeypair -v \
+              -keystore release.keystore \
+              -alias "$KALIAS" \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$KSTORE_PASS" -keypass "$KPASS" \
+              -dname "CN=Eric Pang, OU=Dev, O=ZCode, L=HK, ST=HK, C=HK"
+            echo "✓ 新 keystore 已生成"
+            echo "KEYSTORE_PASSWORD=$KSTORE_PASS" >> $GITHUB_ENV
+            echo "KEY_ALIAS=$KALIAS" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=$KPASS" >> $GITHUB_ENV
+            echo "FIRST_RUN=true" >> $GITHUB_ENV
+          fi
+
+      - name: Build debug APK (always, for testing)
         working-directory: android
         run: ./gradlew assembleDebug
 
-      - name: Build release AAB (for Play Store)
+      - name: Build signed release AAB
         working-directory: android
-        run: ./gradlew bundleRelease
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || env.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || env.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || env.KEY_PASSWORD }}
+        run: |
+          # 將 keystore 放去 Gradle 搵到嘅位置
+          cp app/release.keystore app/release.keystore || true
+          # 設定 signing config
+          cat >> app/build.gradle <<'GRADLE'
+          android.signingConfigs {
+            release {
+              storeFile file('release.keystore')
+              storePassword System.getenv('KEYSTORE_PASSWORD')
+              keyAlias System.getenv('KEY_ALIAS')
+              keyPassword System.getenv('KEY_PASSWORD')
+            }
+          }
+          android.buildTypes.release.signingConfig = android.signingConfigs.release
+          GRADLE
+          ./gradlew bundleRelease
 
-      - name: Upload APK
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: dou-dizhu-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
 
-      - name: Upload AAB
+      - name: Upload signed release AAB
         uses: actions/upload-artifact@v4
         with:
-          name: dou-dizhu-release-aab
+          name: dou-dizhu-signed-aab
           path: android/app/build/outputs/bundle/release/*.aab
-          retention-days: 30
+          retention-days: 90
+
+      - name: Upload keystore backup (首次生成時，記得 download + 加做 Secret)
+        if: env.FIRST_RUN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: KESTORE-BACKUP-DONT-LOSE
+          path: |
+            android/app/release.keystore
+          retention-days: 90
+
+      - name: Print signing info (首次生成時，記低呢啲密碼)
+        if: env.FIRST_RUN == 'true'
+        run: |
+          echo "============================================"
+          echo "🔑 首次 keystore 生成 — 記低以下資訊！"
+          echo "============================================"
+          echo "KEYSTORE_PASSWORD = ${{ env.KEYSTORE_PASSWORD }}"
+          echo "KEY_ALIAS = ${{ env.KEY_ALIAS }}"
+          echo "KEY_PASSWORD = ${{ env.KEY_PASSWORD }}"
+          echo ""
+          echo "⚠️ 下一步："
+          echo "1. Download KESTORE-BACKUP-DONT-LOSE artifact，保存個 .keystore 檔案"
+          echo "2. 喺 repo Settings → Secrets → Actions 加入 4 個 secret："
+          echo "   KEYSTORE_BASE64 (base64 encode 個 keystore)"
+          echo "   KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD"
+          echo ""
+          echo "點樣 base64 encode：base64 -w 0 release.keystore"

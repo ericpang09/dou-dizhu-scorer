@@ -79,19 +79,36 @@ jobs:
           STORE_PASS=$(cat ../signing/store.pass)
           ALIAS=$(cat ../signing/alias.name)
           KEY_PASS=$(cat ../signing/key.pass)
-          cat >> app/build.gradle <<GRADLE
-
-          // 自動注入嘅 release signing config（由 GitHub Actions 生成）
-          android.signingConfigs {
-            release {
-              storeFile file('release.keystore')
-              storePassword '${STORE_PASS}'
-              keyAlias '${ALIAS}'
-              keyPassword '${KEY_PASS}'
-            }
+          # 驗證 keystore 真係讀到
+          keytool -list -keystore app/release.keystore -storepass "$STORE_PASS" -alias "$ALIAS" | head -5
+          # 寫 properties file（Gradle 讀返嚟）
+          cat > app/keystore.properties <<EOF
+          storeFile=release.keystore
+          storePassword=$STORE_PASS
+          keyAlias=$ALIAS
+          keyPassword=$KEY_PASS
+          EOF
+          # 喺 build.gradle 頂部讀 properties，設定 signingConfig
+          cat > app/signing.gradle <<'GRADLE'
+          def props = new Properties()
+          props.load(new FileInputStream(rootProject.file('app/keystore.properties')))
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file(props['storeFile'])
+                      storePassword props['storePassword']
+                      keyAlias props['keyAlias']
+                      keyPassword props['keyPassword']
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
           }
-          android.buildTypes.release.signingConfig = android.signingConfigs.release
           GRADLE
+          echo "apply from: 'signing.gradle'" >> app/build.gradle
           echo "✓ Signing config 已注入"
 
       - name: Build debug APK

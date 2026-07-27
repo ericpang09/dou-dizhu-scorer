@@ -1,0 +1,19 @@
+{
+  "name": "dou-dizhu-scorer",
+  "version": "1.0.0",
+  "description": "鬥地主計分器 - 記分、睇勝率、多人同步",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/ios": "^6.1.2",
+    "@capacitor/app": "^6.0.1",
+    "@capacitor/status-bar": "^6.0.1",
+    "@capacitor/splash-screen": "^6.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

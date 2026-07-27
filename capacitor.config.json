@@ -1,0 +1,27 @@
+{
+  "appId": "com.zcode.doudizhu",
+  "appName": "鬥地主計分器",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor"
+  },
+  "android": {
+    "backgroundColor": "#0a0a14"
+  },
+  "ios": {
+    "backgroundColor": "#0a0a14"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1000,
+      "backgroundColor": "#0a0a14",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0a0a14"
+    }
+  }
+}

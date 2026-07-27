@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a14">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="鬥地主">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-256.png">
+<title>鬥地主</title>
+<style>
+  /* ===== iOS Liquid Glass design system ===== */
+  :root{
+    --bg:#000;
+    --bg-grad-1:#1a1a2e; --bg-grad-2:#0a0a14;
+    --glass:rgba(255,255,255,.07);
+    --glass-2:rgba(255,255,255,.11);
+    --glass-brd:rgba(255,255,255,.12);
+    --glass-brd-2:rgba(255,255,255,.06);
+    --fill:rgba(120,120,128,.20);
+    --fill-2:rgba(120,120,128,.32);
+    --txt:#fff; --txt-2:rgba(235,235,245,.6); --txt-3:rgba(235,235,245,.3);
+    --blue:#0a84ff; --green:#30d158; --green-d:#248a3d;
+    --red:#ff453a; --orange:#ff9f0a; --yellow:#ffd60a;
+    --radius:20px; --radius-sm:14px;
+    --shadow:0 8px 32px rgba(0,0,0,.4);
+    --sf:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI","PingFang HK","Microsoft JhengHei",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    font-family:var(--sf); color:var(--txt); min-height:100vh;
+    background:
+      radial-gradient(1000px 700px at 80% -10%, rgba(10,132,255,.16), transparent 55%),
+      radial-gradient(900px 600px at 0% 100%, rgba(48,209,88,.12), transparent 55%),
+      linear-gradient(180deg, var(--bg-grad-1), var(--bg-grad-2));
+    background-attachment:fixed;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .wrap{max-width:480px;margin:0 auto;padding:0 16px 120px}
+
+  /* ===== Glass base ===== */
+  .glass{
+    background:var(--glass); border:1px solid var(--glass-brd);
+    backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%);
+  }
+
+  /* ===== Header ===== */
+  header{position:sticky;top:0;z-index:30;padding:calc(env(safe-area-inset-top) + 8px) 0 0}
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 10px}
+  .nav h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.5px}
+  .nav .gear{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+    background:var(--glass);border:1px solid var(--glass-brd);font-size:18px;transition:.2s}
+  .nav .gear:active{transform:scale(.92);background:var(--glass-2)}
+
+  /* sync dot */
+  .sync{width:7px;height:7px;border-radius:50%;display:inline-block;vertical-align:middle;margin-right:5px}
+  .sync.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .sync.off{background:var(--txt-3)}
+  .sync.busy{background:var(--yellow);animation:blink 1s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+  /* ===== Standings (real-time score bar) ===== */
+  .stand{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 12px;scroll-snap-type:x mandatory;
+    -ms-overflow-style:none;scrollbar-width:none}
+  .stand::-webkit-scrollbar{display:none}
+  .sc{flex:0 0 auto;min-width:96px;border-radius:var(--radius-sm);padding:11px 13px;scroll-snap-align:start;position:relative;overflow:hidden}
+  .sc-top{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+  .sc .av{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#000;flex-shrink:0}
+  .sc .nm{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:58px}
+  .sc .val{font-size:24px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+  .sc .val.pos{color:var(--green)} .sc .val.neg{color:var(--red)} .sc .val.zero{color:var(--txt-2)}
+  .sc .meta{font-size:10.5px;color:var(--txt-3);margin-top:1px}
+
+  /* ===== Segmented control (iOS tabs) ===== */
+  .segctl{display:flex;padding:2px;border-radius:12px;margin:4px 0 18px}
+  .segctl button{flex:1;padding:8px 0;border:none;background:transparent;color:var(--txt-2);
+    font-size:13.5px;font-weight:600;border-radius:10px;cursor:pointer;transition:.2s;font-family:inherit;position:relative;z-index:1}
+  .segctl button.on{background:var(--glass-2);color:var(--txt);box-shadow:0 1px 6px rgba(0,0,0,.25)}
+
+  /* ===== Section label ===== */
+  .sl{font-size:13px;font-weight:600;color:var(--txt-2);margin:0 0 8px;letter-spacing:.2px}
+
+  /* ===== Player pick cards ===== */
+  .pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:9px}
+  .pc{border-radius:var(--radius-sm);padding:14px 12px;cursor:pointer;position:relative;overflow:hidden;
+    transition:transform .15s, background .2s, border-color .2s;user-select:none}
+  .pc:active{transform:scale(.96)}
+  .pc-id{display:flex;align-items:center;gap:9px}
+  .pc .av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:17px;font-weight:700;color:#000}
+  .pc .nm{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pc .rl{font-size:11px;color:var(--txt-3);margin-top:1px}
+  .pc .badge{position:absolute;top:9px;right:9px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;opacity:0;transition:.2s}
+  .pc.landlord{background:linear-gradient(135deg,rgba(255,214,10,.20),rgba(255,159,10,.10));border-color:rgba(255,214,10,.45)}
+  .pc.landlord .badge{opacity:1;background:var(--yellow);color:#000}
+  .pc.landlord .rl{color:var(--yellow)}
+  .pc.farmer{background:linear-gradient(135deg,rgba(48,209,88,.18),rgba(48,209,88,.07));border-color:rgba(48,209,88,.4)}
+  .pc.farmer .badge{opacity:1;background:var(--green);color:#000}
+  .pc.farmer .rl{color:var(--green)}
+  .pc.dim{opacity:.5}
+
+  /* ===== Pill rows (settings) ===== */
+  .row{display:flex;align-items:center;gap:11px;padding:13px 15px;border-radius:var(--radius-sm)}
+  .row + .row{margin-top:7px}
+  .row .lbl{flex:1;font-size:15px}
+  .stepper{display:flex;align-items:center;gap:0;background:var(--fill);border-radius:10px;overflow:hidden}
+  .stepper button{width:38px;height:34px;border:none;background:transparent;color:var(--txt);font-size:19px;cursor:pointer;font-family:inherit}
+  .stepper button:active{background:var(--fill-2)}
+  .stepper .n{min-width:42px;text-align:center;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+
+  /* ===== Chips ===== */
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{padding:8px 14px;border-radius:20px;background:var(--glass);border:1px solid var(--glass-brd-2);
+    color:var(--txt-2);font-size:13.5px;font-weight:600;cursor:pointer;transition:.18s;user-select:none}
+  .chip:active{transform:scale(.94)}
+  .chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+
+  /* ===== Segmented buttons ===== */
+  .sg{display:flex;gap:6px;background:var(--fill);padding:3px;border-radius:11px}
+  .sg button{flex:1;padding:9px;border:none;background:transparent;color:var(--txt-2);
+    font-weight:600;font-size:14px;border-radius:8px;cursor:pointer;transition:.2s;font-family:inherit}
+  .sg button.on{background:var(--glass-2);color:var(--txt);box-shadow:0 1px 5px rgba(0,0,0,.3)}
+  .sg button.on.lwin{background:rgba(48,209,88,.3);color:var(--green)}
+  .sg button.on.fwin{background:rgba(255,159,0,.3);color:var(--orange)}
+
+  /* ===== Preview ===== */
+  .pv{border-radius:var(--radius-sm);padding:14px;margin-top:12px}
+  .pv .h{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--txt-2);margin-bottom:10px}
+  .pv .h .fx{color:var(--txt-3);font-weight:500}
+  .pv-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+  .pv-l{display:flex;align-items:center;gap:8px;font-size:15px}
+  .pv-l .av{width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;color:#000;display:grid;place-items:center}
+  .pv-l .tg{font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px}
+  .pv-l .tg.L{background:rgba(255,214,10,.2);color:var(--yellow)}
+  .pv-l .tg.F{background:rgba(48,209,88,.18);color:var(--green)}
+  .pv-v{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+  .pv-v.pos{color:var(--green)} .pv-v.neg{color:var(--red)}
+
+  /* ===== Buttons ===== */
+  .btn{width:100%;padding:16px;border:none;border-radius:14px;font-size:16px;font-weight:700;
+    cursor:pointer;transition:.15s;font-family:inherit}
+  .btn:active{transform:scale(.98);opacity:.9}
+  .btn-go{background:var(--blue);color:#fff;box-shadow:0 6px 20px -4px rgba(10,132,255,.5)}
+  .btn-go:disabled{background:var(--fill);color:var(--txt-3);box-shadow:none;cursor:not-allowed}
+  .btn-ghost{background:var(--glass);color:var(--txt);border:1px solid var(--glass-brd)}
+  .btn-red{background:rgba(255,69,58,.16);color:var(--red);border:1px solid rgba(255,69,58,.3)}
+
+  /* ===== Records ===== */
+  .rec{border-radius:var(--radius-sm);margin-bottom:9px;overflow:hidden}
+  .rec-h{display:flex;align-items:center;gap:11px;padding:13px 15px;cursor:pointer}
+  .rec-dt{font-size:11px;color:var(--txt-3);font-weight:500;min-width:40px;line-height:1.25}
+  .rec-mid{flex:1;min-width:0}
+  .rec-roles{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rec-meta{font-size:11.5px;color:var(--txt-3);margin-top:2px}
+  .rec-tag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;white-space:nowrap}
+  .rec-tag.lw{background:rgba(255,214,10,.16);color:var(--yellow)}
+  .rec-tag.fw{background:rgba(48,209,88,.16);color:var(--green)}
+  .chev{color:var(--txt-3);transition:.25s;font-size:13px}
+  .rec.open .chev{transform:rotate(180deg)}
+  .rec-b{padding:0 15px 14px;display:none}
+  .rec.open .rec-b{display:block}
+  .rec-dl{display:flex;justify-content:space-between;font-size:13.5px;padding:7px 0}
+  .rec-dl b{font-variant-numeric:tabular-nums;font-weight:700}
+
+  /* ===== Stats ===== */
+  .stat{border-radius:var(--radius-sm);padding:14px 15px;margin-bottom:8px}
+  .stat-h{display:flex;align-items:center;justify-content:space-between}
+  .stat-nm{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:600}
+  .stat-nm .av{width:32px;height:32px;border-radius:50%;font-size:15px;font-weight:700;color:#000;display:grid;place-items:center}
+  .big{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .sub{font-size:12px;color:var(--txt-3);margin-top:3px}
+  .bar{height:6px;border-radius:4px;background:var(--fill);overflow:hidden;margin-top:10px}
+  .bar>div{height:100%;background:var(--blue);border-radius:4px;transition:width .5s}
+  .pair{display:flex;align-items:center;gap:11px;padding:11px 0}
+  .pair+.pair{border-top:1px solid var(--glass-brd-2)}
+  .pair-av{display:flex}
+  .pair-av .av{width:28px;height:28px;font-size:13px;margin-right:-8px;border:2px solid #000;border-radius:50%}
+  .pair-nm{flex:1;font-size:14px;font-weight:600}
+  .pair-g{font-size:11px;color:var(--txt-3)}
+
+  /* ===== Empty ===== */
+  .empty{text-align:center;padding:50px 20px;color:var(--txt-3)}
+  .empty .ei{font-size:44px;margin-bottom:10px;opacity:.4}
+  .empty p{margin:0 0 5px;font-size:15px;color:var(--txt-2)}
+
+  /* ===== Inputs ===== */
+  input[type=text],input[type=number]{width:100%;padding:13px 14px;border-radius:12px;
+    background:var(--fill);border:1px solid transparent;color:var(--txt);font-size:16px;font-family:inherit;transition:.2s}
+  input:focus{outline:none;border-color:var(--blue);background:var(--fill-2)}
+
+  /* ===== Modal ===== */
+  .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:50;display:none;
+    align-items:flex-end;justify-content:center}
+  .sheet-bg.open{display:flex;animation:fade .2s}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .sheet{background:rgba(28,28,30,.92);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);
+    border:1px solid var(--glass-brd);border-radius:24px 24px 0 0;width:100%;max-width:480px;
+    max-height:85vh;overflow-y:auto;padding:12px 20px calc(20px + env(safe-area-inset-bottom));animation:up .35s cubic-bezier(.2,.9,.3,1)}
+  @keyframes up{from{transform:translateY(100%)}to{transform:none}}
+  .grab{width:38px;height:5px;border-radius:3px;background:var(--txt-3);margin:0 auto 14px;opacity:.6}
+  .sheet h3{margin:0 0 16px;font-size:20px;font-weight:700}
+
+  /* pills */
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px 7px 7px;border-radius:30px;
+    background:var(--glass);border:1px solid var(--glass-brd);margin:0 7px 8px 0;font-size:14px;font-weight:500}
+  .pill .av{width:24px;height:24px;font-size:12px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#000}
+  .pill .rm{cursor:pointer;color:var(--red);opacity:.6;font-size:15px}
+
+  /* toast */
+  #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(50px);
+    background:rgba(40,40,42,.95);backdrop-filter:blur(20px);border:1px solid var(--glass-brd);
+    color:#fff;padding:13px 22px;border-radius:30px;font-size:14.5px;font-weight:600;z-index:99;
+    opacity:0;transition:.3s;pointer-events:none;box-shadow:var(--shadow);max-width:88vw;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.err{border-color:rgba(255,69,58,.4)}
+
+  .hidden{display:none!important}
+  .sep{height:1px;background:var(--glass-brd-2);margin:16px 0}
+  .muted{color:var(--txt-3);font-size:12.5px;line-height:1.5}
+
+  /* 安裝 App 提示 */
+  #installBar{position:fixed;bottom:0;left:0;right:0;z-index:40;
+    background:rgba(20,20,28,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border-top:1px solid var(--glass-brd);padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    display:none;align-items:center;gap:12px;animation:up2 .3s}
+  @keyframes up2{from{transform:translateY(100%)}to{transform:none}}
+  #installBar.show{display:flex}
+  #installBar .ic{font-size:28px}
+  #installBar .tx{flex:1;line-height:1.3}
+  #installBar .tx b{font-size:14px;display:block}
+  #installBar .tx small{font-size:11.5px;color:var(--txt-3)}
+  #installBar .yes{background:var(--blue);color:#fff;border:none;padding:11px 18px;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+  #installBar .no{background:transparent;color:var(--txt-3);border:none;padding:11px;font-size:18px;cursor:pointer}
+
+  /* iOS toggle switch */
+  .toggle{width:51px;height:31px;border-radius:16px;background:rgba(120,120,128,.32);position:relative;cursor:pointer;transition:.25s;flex-shrink:0}
+  .toggle.on{background:var(--green)}
+  .toggle::after{content:'';position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;transition:.25s;box-shadow:0 3px 6px rgba(0,0,0,.3)}
+  .toggle.on::after{transform:translateX(20px)}
+  /* multiplier row */
+  .mrow{display:flex;align-items:center;gap:12px;padding:12px 15px}
+  .mrow + .mrow{margin-top:6px}
+  .mrow .ico{font-size:20px;width:26px;text-align:center}
+  .mrow .mlbl{flex:1}
+  .mrow .mlbl .t{font-size:15px;font-weight:600}
+  .mrow .mlbl .d{font-size:11.5px;color:var(--txt-3);margin-top:1px}
+  .mrow .mx{font-size:12px;color:var(--orange);font-weight:700;min-width:36px;text-align:center}
+  /* 數字選擇器（炸彈/搶地主用） */
+  .nums{display:flex;gap:5px;flex-wrap:wrap}
+  .nums button{width:34px;height:34px;border-radius:9px;border:1px solid var(--glass-brd-2);
+    background:var(--glass);color:var(--txt-2);font-size:14px;font-weight:700;cursor:pointer;
+    transition:.15s;font-family:inherit}
+  .nums button:active{transform:scale(.9)}
+  .nums button.on{background:var(--orange);border-color:var(--orange);color:#000}
+</style>
+</head>
+<body>
+
+<!-- ===== 房間選擇頁（未入房時顯示）===== -->
+<div id="roomScreen" class="wrap">
+  <div style="min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+    <div style="font-size:64px;margin-bottom:8px">🃏</div>
+    <h1 style="font-size:32px;font-weight:800;letter-spacing:-.5px;margin:0 0 6px">鬥地主計分器</h1>
+    <p class="muted" style="margin:0 0 32px">記分、睇勝率、多人同步</p>
+
+    <div class="glass" style="border-radius:20px;padding:24px;width:100%;max-width:340px;margin-bottom:16px">
+      <p class="sl" style="text-align:left">入房間碼</p>
+      <input type="text" id="roomInput" placeholder="例如 AB3K9X" maxlength="8" style="text-align:center;font-size:24px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px" onkeydown="if(event.key==='Enter')enterRoom(this.value)">
+      <button class="btn btn-go" onclick="enterRoom(document.getElementById('roomInput').value)">入房間</button>
+    </div>
+
+    <div style="width:100%;max-width:340px">
+      <button class="btn btn-ghost" onclick="enterRoom(genRoomCode())">＋ 開新房間</button>
+    </div>
+    <p class="muted" style="margin-top:24px;max-width:300px">同一條友一個房間碼，各自喺自己手機入同一個碼，記錄即時同步</p>
+  </div>
+</div>
+
+<!-- ===== 主程式（入房後顯示）===== -->
+<div id="appMain" class="hidden">
+<div class="wrap">
+  <header>
+    <div class="nav">
+      <div style="display:flex;align-items:center;gap:9px">
+        <span onclick="shareRoom()" style="cursor:pointer;background:var(--glass);border:1px solid var(--glass-brd);border-radius:12px;padding:7px 12px;display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700">
+          🏠 <span id="roomCodeTxt">----</span> <span style="color:var(--txt-3);font-size:11px">分享</span>
+        </span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px;color:var(--txt-3);display:flex;align-items:center"><span class="sync off" id="syncDot"></span><span id="syncTxt">離線</span></span>
+        <div class="gear" id="settingsBtn">⚙︎</div>
+      </div>
+    </div>
+    <!-- 實時積分榜 -->
+    <div class="stand" id="standings"></div>
+  </header>
+
+  <div class="segctl glass">
+    <button class="on" data-tab="add">記局</button>
+    <button data-tab="records">紀錄</button>
+    <button data-tab="stats">統計</button>
+  </div>
+
+  <!-- ===== TAB: ADD ===== -->
+  <section id="tab-add">
+    <p class="sl">點一下邊個做地主（另外兩個自動做農民）</p>
+    <div class="pick-grid" id="pickGrid"></div>
+
+    <div id="addForm" class="hidden" style="margin-top:16px">
+      <div class="row glass" style="margin-bottom:9px">
+        <span class="lbl">底分</span>
+        <div class="stepper">
+          <button id="baseMinus">−</button>
+          <span class="n" id="baseVal">5</span>
+          <button id="basePlus">＋</button>
+        </div>
+      </div>
+
+      <p class="sl" style="margin-top:16px">倍數</p>
+      <div class="row glass mrow">
+        <span class="ico">💥</span>
+        <div class="mlbl"><div class="t">炸彈</div><div class="d">每個 ×2，可多個</div></div>
+        <span class="mx" id="bombX">×1</span>
+        <div class="nums" id="bombNums"></div>
+      </div>
+      <div class="row glass mrow">
+        <span class="ico">🚀</span>
+        <div class="mlbl"><div class="t">火箭</div><div class="d">一對王（王炸）×2</div></div>
+        <span class="mx" id="rocketX">×1</span>
+        <div class="toggle" id="rocketTog"></div>
+      </div>
+      <div class="row glass mrow">
+        <span class="ico">🤚</span>
+        <div class="mlbl"><div class="t">搶地主</div><div class="d">每次搶 ×2，可多次</div></div>
+        <span class="mx" id="grabX">×1</span>
+        <div class="nums" id="grabNums"></div>
+      </div>
+      <div class="chips" id="customChips" style="margin-top:9px"></div>
+      <div style="display:flex;gap:8px;margin-top:9px">
+        <input type="number" id="f_customX" min="1" placeholder="自訂倍數" style="flex:1">
+        <button class="btn btn-ghost" id="addCustomX" style="width:auto;padding:13px 18px">＋</button>
+      </div>
+
+      <p class="sl" style="margin-top:18px">特殊</p>
+      <div class="sg" id="springSeg">
+        <button class="on" data-v="none">無</button>
+        <button data-v="spring">☀️ 春天</button>
+        <button data-v="antispring">🌙 反春天</button>
+      </div>
+
+      <p class="sl" style="margin-top:16px">結果</p>
+      <div class="sg" id="winnerSeg">
+        <button class="on lwin" data-v="landlord">👑 地主贏</button>
+        <button data-v="farmer">🌾 農民贏</button>
+      </div>
+
+      <div class="pv glass" id="preview">
+        <div class="h"><span>即時計算</span><span class="fx" id="pvFormula"></span></div>
+        <div id="pvRows"></div>
+      </div>
+
+      <input type="text" id="f_note" placeholder="備註（可選）" style="margin-top:12px">
+
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-ghost hidden" id="cancelEdit" style="width:auto;padding:16px 20px" onclick="cancelEdit()">取消</button>
+        <button class="btn btn-go" id="saveGame" style="flex:1">記低呢局</button>
+      </div>
+    </div>
+
+    <div class="empty hidden" id="needPlayers">
+      <div class="ei">👥</div>
+      <p>未有玩家</p>
+      <p style="font-size:13px">去設定加 3 個或以上玩家</p>
+      <button class="btn btn-go" style="width:auto;padding:12px 28px;margin-top:14px" onclick="openSettings()">去加玩家</button>
+    </div>
+  </section>
+
+  <!-- ===== TAB: RECORDS ===== -->
+  <section id="tab-records" class="hidden">
+    <div id="recordsList"></div>
+  </section>
+
+  <!-- ===== TAB: STATS ===== -->
+  <section id="tab-stats" class="hidden">
+    <p class="sl">總輸贏</p>
+    <div id="overviewStats"></div>
+    <p class="sl" style="margin-top:18px">地主勝率</p>
+    <div id="landlordStats"></div>
+    <p class="sl" style="margin-top:18px">農民配對勝率</p>
+    <div id="pairStats"></div>
+  </section>
+</div>
+</div>
+<!-- ===== appMain 結束 ===== -->
+
+<!-- ===== Settings Sheet ===== -->
+<div class="sheet-bg" id="settingsModal">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>設定</h3>
+    <div class="row glass" style="margin-bottom:14px">
+      <span class="lbl">🏠 房間碼 <b id="roomCodeTxt2" style="color:var(--blue)">----</b></span>
+      <button class="btn btn-ghost" style="width:auto;padding:10px 16px;font-size:13px" onclick="shareRoom()">分享</button>
+    </div>
+    <p class="sl">玩家</p>
+    <div id="playerList" style="margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="newPlayer" placeholder="輸入玩家名" style="flex:1" onkeydown="if(event.key==='Enter')addPlayer()">
+      <button class="btn btn-ghost" style="width:auto;padding:13px 18px" onclick="addPlayer()">加</button>
+    </div>
+    <div class="sep"></div>
+    <p class="sl">預設底分（每局自動用呢個）</p>
+    <div class="row glass">
+      <span class="lbl">底分</span>
+      <div class="stepper">
+        <button onclick="changeDefaultBase(-1)">−</button>
+        <span class="n" id="defBaseVal">5</span>
+        <button onclick="changeDefaultBase(1)">＋</button>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" onclick="exportData()">⬇ 匯出備份</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()">⬆ 匯入</button>
+    </div>
+    <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+    <button class="btn btn-red" style="margin-top:9px" onclick="clearAll()">清除所有紀錄</button>
+    <button class="btn btn-ghost" style="margin-top:9px" onclick="closeSettings();leaveRoom()">🚪 離開房間</button>
+    <button class="btn btn-go" style="margin-top:14px" onclick="closeSettings()">完成</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- 安裝 App 提示 -->
+<div id="installBar">
+  <span class="ic">🃏</span>
+  <div class="tx"><b>裝落主畫面</b><small>好似 App 咁開，離線都用到</small></div>
+  <button class="yes" id="installBtn">安裝</button>
+  <button class="no" id="installDismiss">✕</button>
+</div>
+
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* =========================================================================
+   鬥地主計分器 — 單檔應用（iOS liquid glass 版）
+   ========================================================================= */
+
+/* ---------- 狀態 ---------- */
+const LS_PREFIX = 'douDizhu_';
+// 雲端後台（開發者設定，唔暴露俾用戶）。anon key 設計上公開，由 RLS 保護。
+const SUPABASE_URL = 'https://pfhsgzastrxdgpinzstv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmaHNnemFzdHJ4ZGdwaW56c3R2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4ODg5MTAsImV4cCI6MjEwMDQ2NDkxMH0.ZrAzdgm_xX26rgUaPOzfx0c-LqaxaR0YLxPIpiaWHSs';
+// 房間制：每班朋友一個房間碼，資料完全隔離
+let room = '';                         // 當前房間碼
+let state = { players: [], games: [], defaultBaseScore: 5 };
+let sb = null;
+let syncEnabled = false, syncing = false, realtimeSub = null;
+const COLORS = ['#0a84ff','#30d158','#ff453a','#ff9f0a','#bf5af2','#64d2ff','#ff375f','#ffd60a'];
+
+/* ---------- 工具 ---------- */
+const $ = id => document.getElementById(id);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const avatarOf = name => name ? name.trim().charAt(0).toUpperCase() : '?';
+const colorFor = id => { const i = Math.abs(hashCode(id)) % COLORS.length; return COLORS[i]; };
+function hashCode(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h;}
+function fmtDate(ts){
+  const d = new Date(ts);
+  const mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+  const hh = String(d.getHours()).padStart(2,'0'), mi = String(d.getMinutes()).padStart(2,'0');
+  return `${mm}/${dd}<br>${hh}:${mi}`;
+}
+function toast(msg, err=false){
+  const t = $('toast'); t.textContent = msg; t.className = 'show' + (err?' err':'');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.className='', 2400);
+}
+function genRoomCode(){
+  const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 無易混淆字元 (0/O/1/I)
+  let s=''; for(let i=0;i<6;i++) s+=c[Math.floor(Math.random()*c.length)]; return s;
+}
+
+/* =========================================================================
+   計分邏輯（純函數）
+   ========================================================================= */
+function calcGame(g){
+  const totalMult = (g.multipliers||[]).reduce((a,m)=>a*m.x,1);
+  const springMult = g.spring==='none'?1:2;
+  const perPlayer = g.baseScore * totalMult * springMult;
+  const delta = {};
+  if(g.winner === 'landlord'){
+    delta[g.landlordId] = perPlayer * 2;
+    delta[g.farmerAId]  = -perPlayer;
+    delta[g.farmerBId]  = -perPlayer;
+  } else {
+    delta[g.landlordId] = -perPlayer * 2;
+    delta[g.farmerAId]  = perPlayer;
+    delta[g.farmerBId]  = perPlayer;
+  }
+  return { ...g, totalMult, springMult, perPlayer, delta };
+}
+function formulaStr(g){
+  const c = calcGame(g);
+  let s = `底${g.baseScore}`;
+  if(c.totalMult>1) s += ` × ${c.totalMult}`;
+  if(c.springMult>1) s += ` × 2(${g.spring==='spring'?'春':'反春'})`;
+  return s;
+}
+
+/* =========================================================================
+   統計
+   ========================================================================= */
+function overview(){
+  const r = {};
+  state.players.forEach(p=>{ r[p.id]={total:0,games:0,win:0}; });
+  state.games.forEach(g=>{
+    const c = calcGame(g);
+    [g.landlordId,g.farmerAId,g.farmerBId].forEach(pid=>{
+      if(r[pid]){ r[pid].total += c.delta[pid]||0; r[pid].games++; }
+    });
+    if(c.delta[g.landlordId]>0) r[g.landlordId] && (r[g.landlordId].win++);
+    else { [g.farmerAId,g.farmerBId].forEach(id=>{ r[id]&&r[id].win++; }); }
+  });
+  return r;
+}
+function landlordStats(){
+  const r = {};
+  state.players.forEach(p=>{ r[p.id]={games:0,wins:0}; });
+  state.games.forEach(g=>{
+    if(!r[g.landlordId]) return;
+    r[g.landlordId].games++;
+    if(g.winner==='landlord') r[g.landlordId].wins++;
+  });
+  return r;
+}
+function pairKey(a,b){ return [a,b].sort().join('|'); }
+function farmerPairs(){
+  const r = {};
+  state.games.forEach(g=>{
+    const k = pairKey(g.farmerAId, g.farmerBId);
+    if(!r[k]) r[k]={a:g.farmerAId, b:g.farmerBId, games:0, wins:0};
+    r[k].games++;
+    if(g.winner==='farmer') r[k].wins++;
+  });
+  return r;
+}
+
+/* =========================================================================
+   房間 + 持久化（按房間隔離 localStorage）
+   ========================================================================= */
+function lsKey(){ return LS_PREFIX + 'room_' + room; }
+function saveLocal(){ if(room) localStorage.setItem(lsKey(), JSON.stringify(state)); }
+function loadLocal(){
+  if(!room) return;
+  try{ const raw = localStorage.getItem(lsKey());
+    if(raw){ state = { players:[],games:[],defaultBaseScore:5, ...JSON.parse(raw) }; }
+    else { state = { players:[],games:[],defaultBaseScore:5 }; }
+  }catch(e){ console.warn('load fail', e); }
+}
+function lastRoom(){ return localStorage.getItem(LS_PREFIX+'lastroom')||''; }
+function setLastRoom(r){ if(r) localStorage.setItem(LS_PREFIX+'lastroom', r); }
+
+/* =========================================================================
+   Supabase 同步（房間制：單局推送 + 即時訂閱）
+   ========================================================================= */
+function initSupabase(){
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY || typeof supabase==='undefined'){
+    syncEnabled=false; updateSyncDot(); return;
+  }
+  try{ sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); syncEnabled = true; }
+  catch(e){ syncEnabled=false; }
+  updateSyncDot();
+}
+// 推一個玩家上雲
+async function pushPlayer(p){
+  if(!syncEnabled||!sb||!room) return;
+  try{ await sb.from('players').upsert({id:p.id,room_id:room,name:p.name,created_at:p.createdAt}); }catch(e){console.warn('pushPlayer',e);}
+}
+// 推一局上雲
+async function pushGame(g){
+  if(!syncEnabled||!sb||!room) return;
+  try{ await sb.from('games').upsert({
+    id:g.id, room_id:room, date:g.date, landlord_id:g.landlordId, farmer_a_id:g.farmerAId,
+    farmer_b_id:g.farmerBId, base_score:g.baseScore, multipliers:g.multipliers||[],
+    spring:g.spring, winner:g.winner, note:g.note||''
+  }); }catch(e){console.warn('pushGame',e);}
+}
+// 刪一局
+async function deleteGameCloud(id){
+  if(!syncEnabled||!sb||!room) return;
+  try{ await sb.from('games').delete().eq('id',id); }catch(e){console.warn('delGame',e);}
+}
+// 刪一個玩家
+async function deletePlayerCloud(id){
+  if(!syncEnabled||!sb||!room) return;
+  try{ await sb.from('players').delete().eq('id',id); }catch(e){console.warn('delPlayer',e);}
+}
+// 更新一局（編輯）
+async function updateGameCloud(g){
+  if(!syncEnabled||!sb||!room) return;
+  try{ await sb.from('games').update({
+    landlord_id:g.landlordId, farmer_a_id:g.farmerAId, farmer_b_id:g.farmerBId,
+    base_score:g.baseScore, multipliers:g.multipliers||[], spring:g.spring, winner:g.winner, note:g.note||''
+  }).eq('id',g.id); }catch(e){console.warn('updGame',e);}
+}
+// 由雲端拉成個房間
+async function pullRoom(){
+  if(!syncEnabled||!sb||!room) return;
+  syncing=true; updateSyncDot();
+  try{
+    const [{ data:rp }, { data:rg }] = await Promise.all([
+      sb.from('players').select('*').eq('room_id',room),
+      sb.from('games').select('*').eq('room_id',room)
+    ]);
+    state.players = (rp||[]).map(x=>({id:x.id,name:x.name,createdAt:x.created_at}));
+    state.games = (rg||[]).map(x=>({id:x.id,date:x.date,landlordId:x.landlord_id,farmerAId:x.farmer_a_id,
+      farmerBId:x.farmer_b_id,baseScore:x.base_score,multipliers:x.multipliers||[],spring:x.spring,winner:x.winner,note:x.note}))
+      .sort((a,b)=>b.date-a.date);
+    saveLocal();
+  }catch(e){ console.warn('pull fail', e); }
+  syncing=false; updateSyncDot();
+}
+// 即時訂閱：同房有人改動即刻刷新
+function subscribeRoom(){
+  if(!syncEnabled||!sb||!room) return;
+  if(realtimeSub){ try{realtimeSub.unsubscribe();}catch(e){} }
+  realtimeSub = sb.channel('room_'+room)
+    .on('postgres_changes',{event:'*',schema:'public',table:'games',filter:'room_id=eq.'+room},
+      ()=>{ pullRoom().then(refreshAll); })
+    .on('postgres_changes',{event:'*',schema:'public',table:'players',filter:'room_id=eq.'+room},
+      ()=>{ pullRoom().then(refreshAll); })
+    .subscribe();
+}
+function updateSyncDot(){
+  const dot=$('syncDot'), txt=$('syncTxt');
+  if(!dot) return;
+  if(!room){ dot.className='sync off'; txt.textContent='未入房'; return; }
+  if(syncing){ dot.className='sync busy'; txt.textContent='同步中'; }
+  else if(syncEnabled){ dot.className='sync on'; txt.textContent='已同步'; }
+  else { dot.className='sync off'; txt.textContent='離線'; }
+}
+
+/* =========================================================================
+   玩家管理
+   ========================================================================= */
+function addPlayer(){
+  const inp = $('newPlayer'); const name = inp.value.trim();
+  if(!name){ toast('入個名啦', true); return; }
+  if(state.players.some(p=>p.name.toLowerCase()===name.toLowerCase())){ toast('已經有呢個名', true); return; }
+  const p={ id:uid(), name, createdAt:Date.now() };
+  state.players.push(p);
+  inp.value=''; saveLocal(); renderPlayerList(); refreshAll(); pushPlayer(p);
+}
+function removePlayer(id){
+  const used = state.games.some(g=>g.landlordId===id||g.farmerAId===id||g.farmerBId===id);
+  if(used){ if(!confirm('呢個玩家有紀錄，刪除會影響統計。確定？')) return; }
+  state.players = state.players.filter(p=>p.id!==id);
+  saveLocal(); renderPlayerList(); refreshAll(); deletePlayerCloud(id);
+}
+function renderPlayerList(){
+  const el = $('playerList');
+  if(!state.players.length){ el.innerHTML='<p class="muted">未有玩家，下面加 3 個先</p>'; return; }
+  el.innerHTML = state.players.map(p=>
+    `<span class="pill"><span class="av" style="background:${colorFor(p.id)}">${avatarOf(p.name)}</span>${p.name}<span class="rm" onclick="removePlayer('${p.id}')">✕</span></span>`
+  ).join('');
+}
+
+/* =========================================================================
+   渲染 — 分頁
+   ========================================================================= */
+function switchTab(name){
+  document.querySelectorAll('.segctl button').forEach(t=>t.classList.toggle('on', t.dataset.tab===name));
+  ['add','records','stats'].forEach(n=>$('tab-'+n).classList.toggle('hidden', n!==name));
+  if(name==='records') renderRecords();
+  if(name==='stats') renderStats();
+}
+document.querySelectorAll('.segctl button').forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
+
+/* ---- Standings bar (real-time) ---- */
+function renderStandings(){
+  const el = $('standings'); const ov = overview();
+  if(!state.players.length){ el.innerHTML=''; return; }
+  const sorted=[...state.players].sort((a,b)=>(ov[b.id]?.total||0)-(ov[a.id]?.total||0));
+  el.innerHTML = sorted.map(p=>{
+    const s=ov[p.id]||{total:0,games:0,win:0};
+    const cls = s.total>0?'pos':s.total<0?'neg':'zero';
+    return `<div class="sc glass">
+      <div class="sc-top"><span class="av" style="background:${colorFor(p.id)}">${avatarOf(p.name)}</span><span class="nm">${p.name}</span></div>
+      <div class="val ${cls}">${s.total>0?'+':''}${s.total}</div>
+      <div class="meta">${s.games}局 · 勝${s.win}</div>
+    </div>`;
+  }).join('');
+}
+
+/* =========================================================================
+   新增一局 — 點擊揀人
+   ========================================================================= */
+let formState = { landlordId:'', farmerAId:'', farmerBId:'', baseScore:5,
+  bombCount:0, rocket:false, grabCount:0, custom:[],
+  multipliers:[], spring:'none', winner:'landlord', note:'' };
+// 由獨立欄位導出 multipliers[]（俾儲存同計分用）
+function buildMultipliers(){
+  const m=[];
+  for(let i=0;i<formState.bombCount;i++) m.push({label:'炸彈',x:2});
+  if(formState.rocket) m.push({label:'火箭',x:2});
+  for(let i=0;i<formState.grabCount;i++) m.push({label:'搶地主',x:2});
+  formState.custom.forEach(c=>m.push({label:'自訂×'+c,x:c}));
+  formState.multipliers=m; return m;
+}
+
+function roleOf(id){
+  if(id===formState.landlordId) return 'landlord';
+  if(id===formState.farmerAId || id===formState.farmerBId) return 'farmer';
+  return '';
+}
+
+// 點一下做地主 → 另外兩個自動做農民
+function tapPlayer(id){
+  if(state.players.length < 3){ toast('至少要 3 個玩家', true); return; }
+  formState.landlordId = id;
+  const farmers = state.players.filter(p=>p.id!==id);
+  formState.farmerAId = farmers[0].id;
+  formState.farmerBId = farmers[1].id;
+  renderPick(); toggleForm(); renderPreview();
+}
+function renderPick(){
+  const el=$('pickGrid');
+  if(!state.players.length){ el.innerHTML=''; return; }
+  el.innerHTML = state.players.map(p=>{
+    const r=roleOf(p.id);
+    const cls = r==='landlord'?'landlord':r==='farmer'?'farmer':'';
+    const badge = r==='landlord'?'👑 地主':r==='farmer'?'🌾 農民':'';
+    const rl = r==='landlord'?'點一下做地主':r==='farmer'?'農民':'點一下做地主';
+    return `<div class="pc glass ${cls}" onclick="tapPlayer('${p.id}')">
+      ${badge?`<span class="badge">${badge}</span>`:''}
+      <div class="pc-id"><span class="av" style="background:${colorFor(p.id)}">${avatarOf(p.name)}</span><span class="nm">${p.name}</span></div>
+      <div class="rl">${rl}</div>
+    </div>`;
+  }).join('');
+}
+function toggleForm(){
+  const ready = formState.landlordId && formState.farmerAId && formState.farmerBId;
+  $('addForm').classList.toggle('hidden', !ready);
+}
+function checkPlayersAvailable(){
+  const np=state.players.length;
+  $('needPlayers').classList.toggle('hidden', np>=3);
+  $('pickGrid').classList.toggle('hidden', np<3);
+}
+
+// stepper
+$('baseMinus').onclick=()=>{formState.baseScore=Math.max(1,formState.baseScore-1);$('baseVal').textContent=formState.baseScore;renderPreview();};
+$('basePlus').onclick=()=>{formState.baseScore++;$('baseVal').textContent=formState.baseScore;renderPreview();};
+$('f_note').oninput=e=>formState.note=e.target.value;
+
+// 倍數：炸彈/搶地主計數器
+function bombMult(){ return Math.pow(2,formState.bombCount); }
+function grabMult(){ return Math.pow(2,formState.grabCount); }
+// 數字選擇器（0-5）
+function renderNums(elId, count, onPick){
+  const el=$(elId);
+  el.innerHTML=[0,1,2,3,4,5].map(n=>
+    `<button class="${n===count?'on':''}" onclick="${onPick}(${n})">${n}</button>`).join('');
+}
+function setBomb(n){ formState.bombCount=n; refreshMultUI(); renderPreview(); }
+function setGrab(n){ formState.grabCount=n; refreshMultUI(); renderPreview(); }
+function refreshMultUI(){
+  renderNums('bombNums',formState.bombCount,'setBomb');
+  $('bombX').textContent='×'+(formState.bombCount?bombMult():1);
+  renderNums('grabNums',formState.grabCount,'setGrab');
+  $('grabX').textContent='×'+(formState.grabCount?grabMult():1);
+  $('rocketX').textContent='×'+(formState.rocket?2:1);
+}
+$('rocketTog').onclick=()=>{formState.rocket=!formState.rocket;$('rocketTog').classList.toggle('on',formState.rocket);refreshMultUI();renderPreview();};
+// 自訂倍數
+$('addCustomX').onclick=()=>{
+  const v=+$('f_customX').value; if(!v||v<1){toast('入倍數',true);return;}
+  formState.custom.push(v); $('f_customX').value=''; renderCustomChips(); buildMultipliers(); renderPreview();
+};
+function renderCustomChips(){
+  $('customChips').innerHTML=formState.custom.map((c,i)=>
+    `<div class="chip on" onclick="rmCustom(${i})">自訂×${c} ✕</div>`).join('');
+}
+function rmCustom(i){ formState.custom.splice(i,1); renderCustomChips(); buildMultipliers(); renderPreview(); }
+
+// spring seg
+document.querySelectorAll('#springSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#springSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); formState.spring=b.dataset.v; renderPreview();
+});
+// winner seg
+document.querySelectorAll('#winnerSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#winnerSeg button').forEach(x=>x.classList.remove('on','lwin','fwin'));
+  b.classList.add('on'); b.classList.add(b.dataset.v==='landlord'?'lwin':'fwin'); formState.winner=b.dataset.v; renderPreview();
+});
+
+function renderPreview(){
+  buildMultipliers();
+  if(formState.landlordId && formState.farmerAId && formState.farmerBId){
+    const c=calcGame(formState);
+    const name=id=>(state.players.find(p=>p.id===id)||{}).name||'?';
+    const rows=[
+      {id:formState.landlordId,role:'L',name:name(formState.landlordId),val:c.delta[formState.landlordId]},
+      {id:formState.farmerAId,role:'F',name:name(formState.farmerAId),val:c.delta[formState.farmerAId]},
+      {id:formState.farmerBId,role:'F',name:name(formState.farmerBId),val:c.delta[formState.farmerBId]},
+    ];
+    $('pvRows').innerHTML=rows.map(r=>
+      `<div class="pv-row"><span class="pv-l"><span class="av" style="background:${colorFor(r.id)}">${avatarOf(r.name)}</span>${r.name}<span class="tg ${r.role}">${r.role==='L'?'地主':'農民'}</span></span><span class="pv-v ${r.val>=0?'pos':'neg'}">${r.val>=0?'+':''}${r.val}</span></div>`
+    ).join('');
+    $('pvFormula').textContent=formulaStr(formState);
+  } else {
+    $('pvRows').innerHTML='<div class="muted" style="text-align:center;padding:6px">揀齊 3 個人先計到分</div>';
+    $('pvFormula').textContent='';
+  }
+}
+
+$('saveGame').onclick=()=>{
+  if(!(formState.landlordId&&formState.farmerAId&&formState.farmerBId)){ toast('未揀齊 3 個人',true); return; }
+  buildMultipliers();
+  if(editingId){
+    const idx=state.games.findIndex(g=>g.id===editingId);
+    if(idx>=0){
+      const orig=state.games[idx];
+      state.games[idx]={ ...orig, landlordId:formState.landlordId, farmerAId:formState.farmerAId,
+        farmerBId:formState.farmerBId, baseScore:formState.baseScore, multipliers:[...formState.multipliers],
+        spring:formState.spring, winner:formState.winner, note:formState.note };
+      updateGameCloud(state.games[idx]);
+    }
+    editingId=null; saveLocal();
+    $('saveGame').textContent='記低呢局'; $('cancelEdit').classList.add('hidden');
+    toast('已儲存修改 ✅'); resetForm(); renderStandings(); renderRecords(); renderStats(); switchTab('records');
+  } else {
+    const game={ id:uid(), date:Date.now(), landlordId:formState.landlordId, farmerAId:formState.farmerAId,
+      farmerBId:formState.farmerBId, baseScore:formState.baseScore, multipliers:[...formState.multipliers],
+      spring:formState.spring, winner:formState.winner, note:formState.note };
+    state.games.unshift(game); saveLocal(); pushGame(game);
+    toast('記低咗 🎉'); resetForm(); renderStandings(); switchTab('records');
+  }
+};
+function resetForm(){
+  formState.landlordId=''; formState.farmerAId=''; formState.farmerBId='';
+  formState.baseScore=state.defaultBaseScore;
+  formState.bombCount=0; formState.rocket=false; formState.grabCount=0; formState.custom=[];
+  formState.multipliers=[]; formState.spring='none'; formState.winner='landlord'; formState.note='';
+  $('rocketTog').classList.remove('on');
+  refreshMultUI();
+  document.querySelectorAll('#springSeg button').forEach((b,i)=>b.classList.toggle('on',i===0));
+  document.querySelectorAll('#winnerSeg button').forEach(b=>b.classList.remove('on','lwin','fwin'));
+  const wl=document.querySelector('#winnerSeg button[data-v=landlord]'); wl.classList.add('on','lwin');
+  formState.winner='landlord';
+  $('f_note').value=''; $('customChips').innerHTML=''; $('baseVal').textContent=formState.baseScore;
+  renderPick(); toggleForm(); renderPreview();
+}
+
+/* ---- Records ---- */
+function renderRecords(){
+  const el=$('recordsList');
+  if(!state.games.length){ el.innerHTML='<div class="empty"><div class="ei">📊</div><p>未有紀錄</p><p style="font-size:13px">去「記局」記低第一局</p></div>'; return; }
+  el.innerHTML=state.games.map(g=>{
+    const c=calcGame(g);
+    const name=id=>(state.players.find(p=>p.id===id)||{}).name||'(已刪)';
+    const lw=g.winner==='landlord';
+    const mults=(g.multipliers||[]).map(m=>m.label).join('、')||'無';
+    return `<div class="rec glass" data-id="${g.id}">
+      <div class="rec-h" onclick="toggleRec('${g.id}')">
+        <div class="rec-dt">${fmtDate(g.date)}</div>
+        <div class="rec-mid">
+          <div class="rec-roles"><span style="color:var(--yellow)">👑</span> ${name(g.landlordId)} <span style="color:var(--txt-3);font-weight:400">vs</span> <span style="color:var(--green)">🌾</span> ${name(g.farmerAId)}、${name(g.farmerBId)}</div>
+          <div class="rec-meta">底${g.baseScore} · ${mults}${g.spring!=='none'?(g.spring==='spring'?' · 春天':' · 反春天'):''}</div>
+        </div>
+        <div class="rec-tag ${lw?'lw':'fw'}">${lw?'地主贏':'農民贏'}</div>
+        <span class="chev">▾</span>
+      </div>
+      <div class="rec-b">
+        ${[['landlordId','👑','L'],['farmerAId','🌾','F'],['farmerBId','🌾','F']].map(([k,icon])=>{
+          const v=c.delta[g[k]]; const pid=g[k];
+          return `<div class="rec-dl"><span>${icon} ${name(pid)}</span><b style="color:${v>=0?'var(--green)':'var(--red)'}">${v>=0?'+':''}${v}</b></div>`;
+        }).join('')}
+        <div class="muted" style="margin-top:7px">${formulaStr(g)}</div>
+        ${g.note?`<div style="margin-top:5px;font-size:13px;color:var(--orange)">📝 ${g.note}</div>`:''}
+        <div style="display:flex;gap:8px;margin-top:11px">
+          <button class="btn btn-ghost" style="width:auto;padding:10px 16px;font-size:14px" onclick="editGame('${g.id}')">✎ 修改</button>
+          <button class="btn btn-red" style="width:auto;padding:10px 16px;font-size:14px" onclick="deleteGame('${g.id}')">刪除</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleRec(id){ document.querySelector(`.rec[data-id="${id}"]`).classList.toggle('open'); }
+function deleteGame(id){
+  if(!confirm('刪除呢局？')) return;
+  state.games=state.games.filter(g=>g.id!==id); saveLocal(); deleteGameCloud(id); renderRecords(); renderStandings(); toast('已刪除');
+}
+
+/* ---- 編輯 ---- */
+let editingId = null;
+function editGame(id){
+  const g = state.games.find(x=>x.id===id); if(!g) return;
+  editingId = id;
+  // 填入 formState
+  formState.landlordId=g.landlordId; formState.farmerAId=g.farmerAId; formState.farmerBId=g.farmerBId;
+  formState.baseScore=g.baseScore;
+  formState.bombCount=0; formState.rocket=false; formState.grabCount=0; formState.custom=[];
+  (g.multipliers||[]).forEach(m=>{
+    if(m.label==='炸彈') formState.bombCount++;
+    else if(m.label==='火箭') formState.rocket=true;
+    else if(m.label==='搶地主') formState.grabCount++;
+    else if(m.label.startsWith('自訂')) formState.custom.push(m.x);
+  });
+  formState.spring=g.spring; formState.winner=g.winner; formState.note=g.note||'';
+  // 更新 UI
+  $('rocketTog').classList.toggle('on',formState.rocket);
+  refreshMultUI(); renderCustomChips();
+  document.querySelectorAll('#springSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===g.spring));
+  document.querySelectorAll('#winnerSeg button').forEach(b=>b.classList.remove('on','lwin','fwin'));
+  const wb=document.querySelector(`#winnerSeg button[data-v=${g.winner}]`); wb.classList.add('on',g.winner==='landlord'?'lwin':'fwin');
+  $('baseVal').textContent=formState.baseScore; $('f_note').value=formState.note;
+  $('saveGame').textContent='儲存修改';
+  $('cancelEdit').classList.remove('hidden');
+  switchTab('add'); renderPick(); toggleForm(); renderPreview();
+  toast('修改緊呢局');
+}
+function cancelEdit(){
+  editingId=null; resetForm();
+  $('saveGame').textContent='記低呢局'; $('cancelEdit').classList.add('hidden');
+}
+
+/* ---- Stats ---- */
+function renderStats(){
+  const ov=overview();
+  const sorted=[...state.players].sort((a,b)=>(ov[b.id]?.total||0)-(ov[a.id]?.total||0));
+  $('overviewStats').innerHTML=sorted.length? sorted.map(p=>{
+    const s=ov[p.id]||{total:0,games:0,win:0}; const cls=s.total>0?'pos':s.total<0?'neg':'';
+    return `<div class="stat glass">
+      <div class="stat-h"><div class="stat-nm"><span class="av" style="background:${colorFor(p.id)}">${avatarOf(p.name)}</span>${p.name}</div>
+      <div class="big ${cls==='pos'?'':''}" style="color:${s.total>0?'var(--green)':s.total<0?'var(--red)':'var(--txt-2)'}">${s.total>0?'+':''}${s.total}</div></div>
+      <div class="sub">${s.games} 局 · 贏 ${s.win} 局 (${s.games?Math.round(s.win/s.games*100):0}% 勝率)</div>
+    </div>`;
+  }).join('') : '<div class="empty"><p>未有紀錄</p></div>';
+
+  const ls=landlordStats();
+  const lSorted=[...state.players].filter(p=>(ls[p.id]?.games||0)>0)
+    .sort((a,b)=>(ls[b.id].wins/ls[b.id].games)-(ls[a.id].wins/ls[a.id].games));
+  $('landlordStats').innerHTML=lSorted.length? lSorted.map(p=>{
+    const s=ls[p.id]; const rate=s.games?Math.round(s.wins/s.games*100):0;
+    return `<div class="stat glass">
+      <div class="stat-h"><div class="stat-nm"><span class="av" style="background:${colorFor(p.id)}">${avatarOf(p.name)}</span>${p.name}</div>
+      <div class="big" style="color:var(--blue)">${rate}%</div></div>
+      <div class="sub">做地主 ${s.games} 局 · 贏 ${s.wins} · 輸 ${s.games-s.wins}</div>
+      <div class="bar"><div style="width:${rate}%"></div></div>
+    </div>`;
+  }).join('') : '<div class="empty"><p style="font-size:13px">未有人做過地主</p></div>';
+
+  const pairs=Object.values(farmerPairs()).sort((a,b)=>b.games-a.games);
+  const name=id=>(state.players.find(p=>p.id===id)||{}).name||'?';
+  $('pairStats').innerHTML=pairs.length? pairs.map(pr=>{
+    const rate=pr.games?Math.round(pr.wins/pr.games*100):0;
+    return `<div class="stat glass"><div class="pair">
+      <div class="pair-av"><span class="av" style="background:${colorFor(pr.a)}">${avatarOf(name(pr.a))}</span><span class="av" style="background:${colorFor(pr.b)}">${avatarOf(name(pr.b))}</span></div>
+      <div style="flex:1"><div class="pair-nm">${name(pr.a)} + ${name(pr.b)}</div><div class="pair-g">拍檔 ${pr.games} 局 · 贏 ${pr.wins}</div></div>
+      <div class="big" style="font-size:20px;color:${rate>=50?'var(--green)':'var(--red)'}">${rate}%</div>
+    </div></div>`;
+  }).join('') : '<div class="empty"><p style="font-size:13px">未有農民配對紀錄</p></div>';
+}
+
+/* =========================================================================
+   設定 / 匯出匯入
+   ========================================================================= */
+function openSettings(){ renderPlayerList(); $('defBaseVal').textContent=state.defaultBaseScore; $('settingsModal').classList.add('open'); }
+function changeDefaultBase(d){
+  state.defaultBaseScore=Math.max(1,state.defaultBaseScore+d);
+  $('defBaseVal').textContent=state.defaultBaseScore;
+  // 同步更新記局頁嘅底分（如果嗰局未臨時改過）
+  formState.baseScore=state.defaultBaseScore;
+  $('baseVal').textContent=state.defaultBaseScore;
+  saveLocal(); renderPreview();
+}
+function closeSettings(){ $('settingsModal').classList.remove('open'); }
+$('settingsBtn').onclick=openSettings;
+$('settingsModal').onclick=e=>{if(e.target.id==='settingsModal')closeSettings();};
+
+function exportData(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`dou-dizhu-${new Date().toISOString().slice(0,10)}.json`; a.click(); toast('已匯出備份');
+}
+function importData(e){
+  const f=e.target.files[0]; if(!f)return; const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result);
+    if(d.players&&d.games){ state={...state,...d}; saveLocal(); refreshAll(); toast('匯入成功！'); }
+    else toast('檔案格式唔啱',true);
+  }catch(err){ toast('匯入失敗',true); } };
+  r.readAsText(f); e.target.value='';
+}
+function clearAll(){
+  if(!confirm('清除呢個房間嘅所有玩家同紀錄？唔可以撤銷！'))return;
+  if(!confirm('最後確認：真係全部剷晒？'))return;
+  // 雲端刪除本房所有資料
+  if(syncEnabled&&sb&&room){
+    sb.from('games').delete().eq('room_id',room).then(()=>{});
+    sb.from('players').delete().eq('room_id',room).then(()=>{});
+  }
+  state={players:[],games:[],defaultBaseScore:state.defaultBaseScore}; saveLocal(); refreshAll(); toast('已清除全部');
+}
+
+/* =========================================================================
+   啟動
+   ========================================================================= */
+function refreshAll(){ checkPlayersAvailable(); renderPick(); renderStandings(); renderPreview(); if($('defBaseVal'))$('defBaseVal').textContent=state.defaultBaseScore; }
+
+// 刷新某分頁（俾 realtime 回調用）
+function refreshView(){
+  renderStandings();
+  if(!$('tab-records').classList.contains('hidden')) renderRecords();
+  if(!$('tab-stats').classList.contains('hidden')) renderStats();
+  renderPick();
+}
+
+/* =========================================================================
+   房間流程：開房 / 入房 / 離開
+   ========================================================================= */
+// 入房（已存在或新建都允許）
+async function enterRoom(code){
+  code = (code||'').toUpperCase().trim();
+  if(code.length<4){ toast('房間碼至少 4 個字',true); return; }
+  // 確保房間記錄存在（冇就建）
+  if(syncEnabled&&sb){
+    const { data } = await sb.from('rooms').select('id').eq('id',code).maybeSingle();
+    if(!data){ await sb.from('rooms').insert({id:code,created_at:Date.now()}); }
+  }
+  room = code; setLastRoom(code);
+  loadLocal();                           // 載入本房本機資料（即時顯示）
+  initRoom();                            // 顯示主介面 + 拉雲端 + 訂閱
+  toast('已入房 '+code);
+}
+function initRoom(){
+  $('roomScreen').classList.add('hidden');
+  $('appMain').classList.remove('hidden');
+  $('roomCodeTxt').textContent = room;
+  $('roomCodeTxt2').textContent = room;
+  initSupabase();
+  checkPlayersAvailable(); renderPick(); renderStandings(); refreshMultUI(); renderPreview(); renderRecords(); renderStats();
+  refreshAll();
+  pullRoom().then(()=>{ refreshAll(); renderRecords(); renderStats(); });
+  subscribeRoom();
+  updateSyncDot();
+}
+function leaveRoom(){
+  if(realtimeSub){ try{realtimeSub.unsubscribe();}catch(e){} realtimeSub=null; }
+  room=''; localStorage.removeItem(LS_PREFIX+'lastroom');
+  state={players:[],games:[],defaultBaseScore:5};
+  $('appMain').classList.add('hidden');
+  $('roomScreen').classList.remove('hidden');
+  $('roomInput').value='';
+  updateSyncDot();
+}
+function shareRoom(){
+  const url = location.origin + location.pathname + '?room=' + room;
+  if(navigator.share){ navigator.share({title:'鬥地主計分器',text:'入房間碼 '+room, url}); }
+  else {
+    navigator.clipboard.writeText(url).then(()=>toast('連結已複製！貼俾朋友就得'));
+  }
+}
+
+// 自動由 URL 入房 / 記住上次房間
+(function bootstrap(){
+  initSupabase();
+  const urlRoom = new URLSearchParams(location.search).get('room');
+  const target = (urlRoom||lastRoom()||'').toUpperCase().trim();
+  if(target){
+    $('roomScreen').classList.add('hidden'); // 先藏住，等 enterRoom 處理
+    $('appMain').classList.remove('hidden');
+    room = target;
+    $('roomCodeTxt').textContent = target; $('roomCodeTxt2').textContent = target;
+    loadLocal();
+    checkPlayersAvailable(); renderPick(); renderStandings(); refreshMultUI(); renderPreview(); renderRecords(); renderStats();
+    pullRoom().then(()=>{ refreshAll(); renderRecords(); renderStats(); });
+    subscribeRoom(); updateSyncDot();
+  } else {
+    $('roomScreen').classList.remove('hidden');
+    $('appMain').classList.add('hidden');
+  }
+})();
+
+// PWA 安裝提示
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e;
+  $('installBar').classList.add('show');
+});
+$('installBtn').onclick = async () => {
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  $('installBar').classList.remove('show');
+};
+$('installDismiss').onclick = () => $('installBar').classList.remove('show');
+window.addEventListener('appinstalled', () => $('installBar').classList.remove('show'));
+
+// 註冊 Service Worker（PWA 離線功能）
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW fail',e));
+  });
+}
+</script>
+</body>
+</html>

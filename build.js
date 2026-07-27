@@ -24,6 +24,10 @@ function copyRecursive(src, dest, ignore = []) {
 fs.rmSync(DEST, { recursive: true, force: true });
 fs.mkdirSync(DEST, { recursive: true });
 
-// 複製 web assets（排除 native 開發用嘅嘢）
-copyRecursive(SRC, DEST, ['node_modules', 'www', 'android', 'ios', '.git', '.vercel']);
+// 複製 web assets（排除 native 開發用嘅嘢 + 開發檔案）
+copyRecursive(SRC, DEST, [
+  'node_modules', 'www', 'android', 'ios', '.git', '.vercel', '.github',
+  'package.json', 'package-lock.json', 'build.js', 'capacitor.config.json',
+  'README.md', '.gitignore'
+]);
 console.log('✓ Web assets 複製到 www/');

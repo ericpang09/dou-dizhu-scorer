@@ -5,3 +5,16 @@ android/
 ios/
 .DS_Store
 *.log
+
+# 本地測試 / 敏感檔案（唔好推上去）
+.playwright-cli/
+aab-out/
+apk-out/
+test-shots/
+test-logs/
+keystore-backup/
+*.keystore
+*.jks
+keystore.properties
+store.pass
+key.pass

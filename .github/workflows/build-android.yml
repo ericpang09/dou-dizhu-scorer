@@ -53,22 +53,22 @@ jobs:
             echo "first_run=false" >> $GITHUB_OUTPUT
           else
             echo "=== 冇 keystore secret，自動生成新嘅 ==="
+            # PKCS12 唔支援 store/key 唔同密碼，所以兩個用同一個
             KSTORE_PASS="dz$(openssl rand -hex 8)"
             KALIAS="doudizhu"
-            KPASS="dz$(openssl rand -hex 8)"
             keytool -genkeypair -v \
               -keystore signing/release.keystore \
               -alias "$KALIAS" \
               -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass "$KSTORE_PASS" -keypass "$KPASS" \
+              -storepass "$KSTORE_PASS" -keypass "$KSTORE_PASS" \
               -dname "CN=Eric Pang, OU=Dev, O=ZCode, L=HK, ST=HK, C=HK"
             echo "$KSTORE_PASS" > signing/store.pass
             echo "$KALIAS" > signing/alias.name
-            echo "$KPASS" > signing/key.pass
+            echo "$KSTORE_PASS" > signing/key.pass
             echo "first_run=true" >> $GITHUB_OUTPUT
             echo "keystore_password=$KSTORE_PASS" >> $GITHUB_OUTPUT
             echo "key_alias=$KALIAS" >> $GITHUB_OUTPUT
-            echo "key_password=$KPASS" >> $GITHUB_OUTPUT
+            echo "key_password=$KSTORE_PASS" >> $GITHUB_OUTPUT
           fi
           ls -la signing/
 

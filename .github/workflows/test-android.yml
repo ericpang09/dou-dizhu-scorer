@@ -44,15 +44,17 @@ jobs:
           target: default
           arch: x86_64
           script: |
-            adb install -r android/app/build/outputs/apk/debug/app-debug.apk &&
-            adb shell pm list packages | grep zcode &&
-            adb shell am start -n com.zcode.doudizhu/.MainActivity &&
-            sleep 12 &&
-            adb exec-out screencap -p > /tmp/screen-launch.png &&
-            (adb logcat -d | grep -iE "FATAL|AndroidRuntime" | head -10 || echo "NO_CRASH") &&
-            sleep 8 &&
-            adb exec-out screencap -p > /tmp/screen-loaded.png &&
-            adb shell dumpsys activity activities | grep -iE "mResumed|zcode" | head -3
+            set -e
+            adb wait-for-device
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            adb shell pm list packages | grep zcode
+            adb shell monkey -p com.zcode.doudizhu -c android.intent.category.LAUNCHER 1
+            sleep 15
+            adb exec-out screencap -p > /tmp/screen-launch.png
+            adb logcat -d | grep -iE "FATAL|AndroidRuntime" | head -10 || echo "NO_CRASH_FOUND"
+            sleep 10
+            adb exec-out screencap -p > /tmp/screen-loaded.png
+            adb shell dumpsys activity activities | grep -iE "mResumed|zcode" | head -3 || echo "no activity info"
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4

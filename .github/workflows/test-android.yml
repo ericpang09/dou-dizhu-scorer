@@ -1,0 +1,75 @@
+name: Test Android APK (雲端模擬器測試)
+
+on:
+  workflow_dispatch:  # 手動觸發
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install deps & build web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Add Android platform & copy
+        run: |
+          npx cap add android || true
+          npx cap copy android
+
+      - name: Build APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Enable KVM (for hardware-accelerated emulator)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0777", OPTIONS="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run APK on cloud emulator + screenshot
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          script: |
+            echo "=== 安裝 APK ==="
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            echo "=== 等待 App 啟動 ==="
+            sleep 3
+            echo "=== 擷取 launch 截圖 ==="
+            adb exec-out screencap -p > /tmp/screen-launch.png
+            echo "=== 列出已安裝 App ==="
+            adb shell pm list packages | grep zcode || echo "App 未搵到"
+            echo "=== 檢查 logcat 有冇 crash ==="
+            adb logcat -d | grep -iE "FATAL|AndroidRuntime|crash" | head -20 || echo "冇 crash"
+            echo "=== 再等幾秒 + 第二張截圖 ==="
+            sleep 5
+            adb exec-out screencap -p > /tmp/screen-loaded.png
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots
+          path: |
+            /tmp/screen-launch.png
+            /tmp/screen-loaded.png
+          retention-days: 30
+
+      - name: Upload logcat
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logcat
+          path: /tmp/screen-*.png
+          retention-days: 30

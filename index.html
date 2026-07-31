@@ -873,9 +873,10 @@ function renderRecords(){
     const name=id=>(state.players.find(p=>p.id===id)||{}).name||'(已刪)';
     const lw=g.winner==='landlord';
     const mults=(g.multipliers||[]).map(m=>m.label).join('、')||'無';
-    const lDelta=c.delta[g.landlordId];      // 地主贏輸
-    const fDelta=Math.abs(c.delta[g.farmerAId]); // 每個農民贏輸（絕對值相同）
+    const lDelta=c.delta[g.landlordId];       // 地主贏輸（含正負號）
+    const fDelta=c.delta[g.farmerAId];        // 農民贏輸（含正負號）
     const lPos=lDelta>=0;
+    const fPos=fDelta>=0;
     return `<div class="rec glass" data-id="${g.id}">
       <div class="rec-h" onclick="toggleRec('${g.id}')">
         <div class="rec-dt">${fmtDate(g.date)}</div>
@@ -884,7 +885,7 @@ function renderRecords(){
           <div class="rec-meta">底${g.baseScore} · ${mults}${g.spring!=='none'?(g.spring==='spring'?' · 春天':' · 反春天'):''}</div>
           <div class="rec-score">
             <span style="color:${lPos?'var(--green)':'var(--red)'}">👑 ${lPos?'+':''}${lDelta}</span>
-            <span style="color:${!lPos?'var(--green)':'var(--red)'}">🌾 ${!lPos?'+':''}${fDelta}</span>
+            <span style="color:${fPos?'var(--green)':'var(--red)'}">🌾 ${fPos?'+':''}${fDelta}</span>
           </div>
         </div>
         <div class="rec-tag ${lw?'lw':'fw'}">${lw?'地主贏':'農民贏'}</div>

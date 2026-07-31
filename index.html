@@ -394,6 +394,7 @@
 
   <!-- ===== TAB: RECORDS ===== -->
   <section id="tab-records" class="hidden">
+    <button class="btn btn-go" id="quickAddBtn" style="margin-bottom:14px">＋ 快速記局（直接填分數）</button>
     <div id="recordsList"></div>
   </section>
 
@@ -449,6 +450,21 @@
 
 <div id="toast"></div>
 
+<!-- ===== 快速記局 / 修改紀錄 Sheet ===== -->
+<div class="sheet-bg" id="quickModal">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3 id="quickTitle">快速記局</h3>
+    <p class="muted" style="margin-top:-8px;margin-bottom:14px">直接填每人贏/輸幾多，唔使理倍數</p>
+    <div id="quickRows"></div>
+    <input type="text" id="quickNote" placeholder="備註（可選）" style="margin-top:14px">
+    <div class="sep"></div>
+    <p class="muted">💡 提示：贏填正數（例如 +20），輸填負數（例如 -10）。三個分數加埋應該係 0。</p>
+    <button class="btn btn-go" style="margin-top:14px" id="quickSave">儲存</button>
+    <button class="btn btn-ghost" style="margin-top:9px" onclick="closeQuick()">取消</button>
+  </div>
+</div>
+
 <!-- 安裝 App 提示 -->
 <div id="installBar">
   <span class="ic">🃏</span>
@@ -501,6 +517,11 @@ function genRoomCode(){
    計分邏輯（純函數）
    ========================================================================= */
 function calcGame(g){
+  // 快速記局：直接用自訂分數
+  if(g._quickScores){
+    const delta={...g._quickScores};
+    return { ...g, totalMult:1, springMult:1, perPlayer:0, delta };
+  }
   const totalMult = (g.multipliers||[]).reduce((a,m)=>a*m.x,1);
   const springMult = g.spring==='none'?1:2;
   const perPlayer = g.baseScore * totalMult * springMult;
@@ -599,7 +620,7 @@ async function pushGame(g){
   try{ await sb.from('games').upsert({
     id:g.id, room_id:room, date:g.date, landlord_id:g.landlordId, farmer_a_id:g.farmerAId,
     farmer_b_id:g.farmerBId, base_score:g.baseScore, multipliers:g.multipliers||[],
-    spring:g.spring, winner:g.winner, note:g.note||''
+    spring:g.spring, winner:g.winner, note: g._quickScores ? '__QS__'+JSON.stringify(g._quickScores)+(g.note?'|||'+g.note:'') : (g.note||'')
   }); }catch(e){console.warn('pushGame',e);}
 }
 // 刪一局
@@ -617,7 +638,8 @@ async function updateGameCloud(g){
   if(!syncEnabled||!sb||!room) return;
   try{ await sb.from('games').update({
     landlord_id:g.landlordId, farmer_a_id:g.farmerAId, farmer_b_id:g.farmerBId,
-    base_score:g.baseScore, multipliers:g.multipliers||[], spring:g.spring, winner:g.winner, note:g.note||''
+    base_score:g.baseScore, multipliers:g.multipliers||[], spring:g.spring, winner:g.winner,
+    note: g._quickScores ? '__QS__'+JSON.stringify(g._quickScores)+(g.note?'|||'+g.note:'') : (g.note||'')
   }).eq('id',g.id); }catch(e){console.warn('updGame',e);}
 }
 // 由雲端拉成個房間
@@ -630,9 +652,17 @@ async function pullRoom(){
       sb.from('games').select('*').eq('room_id',room)
     ]);
     state.players = (rp||[]).map(x=>({id:x.id,name:x.name,createdAt:x.created_at}));
-    state.games = (rg||[]).map(x=>({id:x.id,date:x.date,landlordId:x.landlord_id,farmerAId:x.farmer_a_id,
-      farmerBId:x.farmer_b_id,baseScore:x.base_score,multipliers:x.multipliers||[],spring:x.spring,winner:x.winner,note:x.note}))
-      .sort((a,b)=>b.date-a.date);
+    state.games = (rg||[]).map(x=>{
+      let note=x.note||'', qs=null;
+      if(note.startsWith('__QS__')){
+        const parts=note.slice(6).split('|||');
+        try{ qs=JSON.parse(parts[0]); }catch(e){}
+        note=parts[1]||'';
+      }
+      return {id:x.id,date:x.date,landlordId:x.landlord_id,farmerAId:x.farmer_a_id,
+        farmerBId:x.farmer_b_id,baseScore:x.base_score,multipliers:x.multipliers||[],spring:x.spring,winner:x.winner,
+        note:note, _quickScores:qs};
+    }).sort((a,b)=>b.date-a.date);
     saveLocal();
   }catch(e){ console.warn('pull fail', e); }
   syncing=false; updateSyncDot();
@@ -899,7 +929,7 @@ function renderRecords(){
         <div class="muted" style="margin-top:7px">${formulaStr(g)}</div>
         ${g.note?`<div style="margin-top:5px;font-size:13px;color:var(--orange)">📝 ${g.note}</div>`:''}
         <div style="display:flex;gap:8px;margin-top:11px">
-          <button class="btn btn-ghost" style="width:auto;padding:10px 16px;font-size:14px" onclick="editGame('${g.id}')">✎ 修改</button>
+          <button class="btn btn-ghost" style="width:auto;padding:10px 16px;font-size:14px" onclick="openQuickEdit('${g.id}')">✎ 修改分數</button>
           <button class="btn btn-red" style="width:auto;padding:10px 16px;font-size:14px" onclick="deleteGame('${g.id}')">刪除</button>
         </div>
       </div>
@@ -909,8 +939,82 @@ function renderRecords(){
 function toggleRec(id){ document.querySelector(`.rec[data-id="${id}"]`).classList.toggle('open'); }
 function deleteGame(id){
   if(!confirm('刪除呢局？')) return;
-  state.games=state.games.filter(g=>g.id!==id); saveLocal(); deleteGameCloud(id); renderRecords(); renderStandings(); toast('已刪除');
+  state.games=state.games.filter(g=>g.id!==id); saveLocal(); deleteGameCloud(id); renderRecords(); renderStandings(); renderStats(); toast('已刪除');
 }
+
+/* ---- 快速記局 / 直接改分數（唔使倍數）---- */
+let quickMode = 'add';      // 'add' 或 'edit'
+let quickEditId = null;
+let quickPlayers = [];      // 當前快速記局用嘅 3 個玩家
+function openQuickAdd(){
+  if(state.players.length<3){ toast('至少要 3 個玩家',true); return; }
+  quickMode='add'; quickEditId=null;
+  quickPlayers = state.players.slice(0,3);   // 預設頭 3 個
+  $('quickTitle').textContent='快速記局';
+  $('quickNote').value='';
+  renderQuickRows();
+  $('quickModal').classList.add('open');
+}
+function openQuickEdit(id){
+  const g = state.games.find(x=>x.id===id); if(!g) return;
+  quickMode='edit'; quickEditId=id;
+  quickPlayers = [g.landlordId,g.farmerAId,g.farmerBId].map(pid=>state.players.find(p=>p.id===pid)).filter(Boolean);
+  if(quickPlayers.length<3){ toast('玩家資料唔齊',true); return; }
+  const c=calcGame(g);
+  $('quickTitle').textContent='修改分數';
+  $('quickNote').value=g.note||'';
+  renderQuickRows(c);
+  $('quickModal').classList.add('open');
+}
+function closeQuick(){ $('quickModal').classList.remove('open'); }
+function renderQuickRows(existing){
+  const rows = quickPlayers.map((p,i)=>{
+    const v = existing ? existing.delta[p.id] : 0;
+    return `<div class="row glass" style="margin-bottom:8px">
+      <span class="avatar" style="background:${colorFor(p.id)};width:34px;height:34px;font-size:15px">${avatarOf(p.name)}</span>
+      <div style="flex:1"><div style="font-size:15px;font-weight:600">${p.name}</div>
+        <select id="quickP${i}" style="margin-top:5px;font-size:13px;padding:8px">
+          ${state.players.map(pp=>`<option value="${pp.id}" ${pp.id===p.id?'selected':''}>${pp.name}</option>`).join('')}
+        </select>
+      </div>
+      <input type="number" id="quickV${i}" value="${v||''}" placeholder="0" style="width:90px;text-align:center;font-size:18px;font-weight:700;color:${v>=0?'var(--green)':'var(--red)'}">
+    </div>`;
+  }).join('');
+  $('quickRows').innerHTML = rows;
+  // 即時變色
+  for(let i=0;i<3;i++){
+    const inp=$('quickV'+i); if(!inp) continue;
+    inp.oninput=()=>{ const n=+inp.value||0; inp.style.color=n>=0?'var(--green)':'var(--red)'; };
+  }
+}
+$('quickAddBtn').onclick=openQuickAdd;
+$('quickModal').onclick=e=>{if(e.target.id==='quickModal')closeQuick();};
+$('quickSave').onclick=()=>{
+  const ids=[0,1,2].map(i=>$('quickP'+i).value);
+  if(new Set(ids).size!==3){ toast('3 個人要唔同',true); return; }
+  const vals=[0,1,2].map(i=>+$('quickV'+i).value||0);
+  const sum=vals[0]+vals[1]+vals[2];
+  if(sum!==0){ if(!confirm('三人分數加埋 = '+sum+'（唔係 0），確定儲存？')) return; }
+  // 轉成 game 格式（用分數反推：winner = 邊邊正，base=abs最大，multipliers 空）
+  const max=Math.max(...vals.map(Math.abs));
+  const landlordWin = vals[0]>0;   // 第一個係地主
+  const game={
+    id: quickMode==='edit' ? quickEditId : uid(),
+    date: quickMode==='edit' ? (state.games.find(g=>g.id===quickEditId)||{}).date || Date.now() : Date.now(),
+    landlordId: ids[0], farmerAId: ids[1], farmerBId: ids[2],
+    baseScore: max, multipliers: [], spring:'none',
+    winner: landlordWin?'landlord':'farmer',
+    note: $('quickNote').value.trim(),
+    _quickScores: {[ids[0]]:vals[0],[ids[1]]:vals[1],[ids[2]]:vals[2]}   // 直接存分數
+  };
+  if(quickMode==='edit'){
+    const idx=state.games.findIndex(g=>g.id===quickEditId);
+    if(idx>=0){ const orig=state.games[idx]; state.games[idx]={...orig,...game}; updateGameCloud(state.games[idx]); }
+  } else {
+    state.games.unshift(game); pushGame(game);
+  }
+  saveLocal(); closeQuick(); renderRecords(); renderStandings(); renderStats(); toast(quickMode==='edit'?'已修改 ✅':'已記低 🎉');
+};
 
 /* ---- 編輯 ---- */
 let editingId = null;

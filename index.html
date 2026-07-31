@@ -160,6 +160,7 @@
   .rec-mid{flex:1;min-width:0}
   .rec-roles{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rec-meta{font-size:11.5px;color:var(--txt-3);margin-top:2px}
+  .rec-score{display:flex;gap:14px;margin-top:4px;font-size:14px;font-weight:700}
   .rec-tag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;white-space:nowrap}
   .rec-tag.lw{background:rgba(255,214,10,.16);color:var(--yellow)}
   .rec-tag.fw{background:rgba(48,209,88,.16);color:var(--green)}
@@ -872,12 +873,19 @@ function renderRecords(){
     const name=id=>(state.players.find(p=>p.id===id)||{}).name||'(已刪)';
     const lw=g.winner==='landlord';
     const mults=(g.multipliers||[]).map(m=>m.label).join('、')||'無';
+    const lDelta=c.delta[g.landlordId];      // 地主贏輸
+    const fDelta=Math.abs(c.delta[g.farmerAId]); // 每個農民贏輸（絕對值相同）
+    const lPos=lDelta>=0;
     return `<div class="rec glass" data-id="${g.id}">
       <div class="rec-h" onclick="toggleRec('${g.id}')">
         <div class="rec-dt">${fmtDate(g.date)}</div>
         <div class="rec-mid">
           <div class="rec-roles"><span style="color:var(--yellow)">👑</span> ${name(g.landlordId)} <span style="color:var(--txt-3);font-weight:400">vs</span> <span style="color:var(--green)">🌾</span> ${name(g.farmerAId)}、${name(g.farmerBId)}</div>
           <div class="rec-meta">底${g.baseScore} · ${mults}${g.spring!=='none'?(g.spring==='spring'?' · 春天':' · 反春天'):''}</div>
+          <div class="rec-score">
+            <span style="color:${lPos?'var(--green)':'var(--red)'}">👑 ${lPos?'+':''}${lDelta}</span>
+            <span style="color:${!lPos?'var(--green)':'var(--red)'}">🌾 ${!lPos?'+':''}${fDelta}</span>
+          </div>
         </div>
         <div class="rec-tag ${lw?'lw':'fw'}">${lw?'地主贏':'農民贏'}</div>
         <span class="chev">▾</span>

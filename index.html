@@ -510,8 +510,10 @@ function toast(msg, err=false){
   clearTimeout(t._t); t._t = setTimeout(()=>t.className='', 2400);
 }
 function genRoomCode(){
-  const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 無易混淆字元 (0/O/1/I)
-  let s=''; for(let i=0;i<6;i++) s+=c[Math.floor(Math.random()*c.length)]; return s;
+  // 淨用極度可分辨字元：避開 E/F, B/8, G/6, J/L, S/5, Z/2, M/N, O/0, I/1 等
+  const c='3479ACDHKPUWY';   // 14 個一眼就分到嘅字元
+  let s=''; for(let i=0;i<6;i++){ s+=c[Math.floor(Math.random()*c.length)]; if(i===2) s+='-'; }
+  return s;   // 格式 XXX-XXX
 }
 
 /* =========================================================================
@@ -1146,7 +1148,7 @@ function refreshView(){
    ========================================================================= */
 // 入房（已存在或新建都允許）
 async function enterRoom(code){
-  code = (code||'').toUpperCase().trim();
+  code = (code||'').toUpperCase().trim().replace(/\s|-/g,'');   // 去空格同連字號
   if(code.length<4){ toast('房間碼至少 4 個字',true); return; }
   // 檢查呢間房喺雲端有冇資料（避免打錯碼入空房）
   let isExistingRoom = false;

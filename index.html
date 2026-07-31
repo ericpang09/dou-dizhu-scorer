@@ -72,10 +72,10 @@
   .stand{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 12px;scroll-snap-type:x mandatory;
     -ms-overflow-style:none;scrollbar-width:none}
   .stand::-webkit-scrollbar{display:none}
-  .sc{flex:0 0 auto;min-width:96px;border-radius:var(--radius-sm);padding:11px 13px;scroll-snap-align:start;position:relative;overflow:hidden}
+  .sc{flex:1 1 0;min-width:0;border-radius:var(--radius-sm);padding:11px 13px;position:relative;overflow:hidden}
   .sc-top{display:flex;align-items:center;gap:7px;margin-bottom:6px}
   .sc .av{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#000;flex-shrink:0}
-  .sc .nm{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:58px}
+  .sc .nm{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
   .sc .val{font-size:24px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
   .sc .val.pos{color:var(--green)} .sc .val.neg{color:var(--red)} .sc .val.zero{color:var(--txt-2)}
   .sc .meta{font-size:10.5px;color:var(--txt-3);margin-top:1px}

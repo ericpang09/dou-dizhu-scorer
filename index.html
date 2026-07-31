@@ -396,7 +396,10 @@
 
   <!-- ===== TAB: RECORDS ===== -->
   <section id="tab-records" class="hidden">
-    <button class="btn btn-go" id="quickAddBtn" style="margin-bottom:14px">＋ 快速記局（直接填分數）</button>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn btn-go" id="quickAddBtn" style="flex:1">＋ 快速記局</button>
+      <button class="btn btn-ghost" id="settleBtn" style="width:auto;padding:16px 20px">💰 結算</button>
+    </div>
     <div id="recordsList"></div>
   </section>
 
@@ -464,6 +467,18 @@
     <p class="muted">💡 提示：贏填正數（例如 +20），輸填負數（例如 -10）。三個分數加埋應該係 0。</p>
     <button class="btn btn-go" style="margin-top:14px" id="quickSave">儲存</button>
     <button class="btn btn-ghost" style="margin-top:9px" onclick="closeQuick()">取消</button>
+  </div>
+</div>
+
+<!-- ===== 結算 Sheet ===== -->
+<div class="sheet-bg" id="settleModal">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>💰 結算</h3>
+    <div id="settleContent"></div>
+    <div class="sep"></div>
+    <p class="muted" id="settleHint"></p>
+    <button class="btn btn-go" style="margin-top:14px" onclick="closeSettle()">完成</button>
   </div>
 </div>
 
@@ -950,6 +965,43 @@ function deleteGame(id){
 let quickMode = 'add';      // 'add' 或 'edit'
 let quickEditId = null;
 let quickPlayers = [];      // 當前快速記局用嘅 3 個玩家
+
+/* ---- 結算（總結每人贏輸）---- */
+function openSettle(){
+  if(!state.players.length || !state.games.length){ toast('未有紀錄可結算',true); return; }
+  const ov = overview();
+  const sorted = [...state.players].sort((a,b)=>(ov[b.id]?.total||0)-(ov[a.id]?.total||0));
+  // 找最大贏家同輸家
+  const totals = sorted.map(p=>ov[p.id]?.total||0);
+  const maxWin = Math.max(...totals);
+  const maxLose = Math.min(...totals);
+  const totalGames = state.games.length;
+  const totalTurnover = totals.filter(t=>t>0).reduce((a,b)=>a+b,0);  // 總成交額
+
+  const rows = sorted.map((p,i)=>{
+    const s = ov[p.id]||{total:0,games:0,win:0};
+    const t = s.total;
+    const isWinner = t===maxWin && t>0;
+    const isLoser = t===maxLose && t<0;
+    const rate = s.games ? Math.round(s.win/s.games*100) : 0;
+    return `<div class="row glass" style="margin-bottom:8px;${isWinner?'border-color:var(--green)':''}${isLoser?'border-color:var(--red)':''}">
+      <span class="avatar" style="background:${colorFor(p.id)};width:40px;height:40px;font-size:18px">${avatarOf(p.name)}</span>
+      <div style="flex:1">
+        <div style="font-size:17px;font-weight:700">${p.name} ${isWinner?'🏆':''}${isLoser?'💩':''}</div>
+        <div class="muted">${s.games}局 · 勝率${rate}%</div>
+      </div>
+      <div style="font-size:26px;font-weight:800;color:${t>0?'var(--green)':t<0?'var(--red)':'var(--txt-2)'};font-variant-numeric:tabular-nums">${t>0?'+':''}${t}</div>
+    </div>`;
+  }).join('');
+
+  $('settleContent').innerHTML = rows;
+  $('settleHint').innerHTML = `共 ${totalGames} 局 · 總成交 ${totalTurnover} 分<br>${maxWin>0 ? '🏆 大贏家：'+sorted[0].name+' (+'+maxWin+')' : ''}${maxWin>0&&maxLose<0?' · ':''}${maxLose<0?'💩 大輸家：'+sorted[sorted.length-1].name+' ('+maxLose+')':''}`;
+  $('settleModal').classList.add('open');
+}
+function closeSettle(){ $('settleModal').classList.remove('open'); }
+$('settleBtn').onclick=openSettle;
+$('settleModal').onclick=e=>{if(e.target.id==='settleModal')closeSettle();};
+
 function openQuickAdd(){
   if(state.players.length<3){ toast('至少要 3 個玩家',true); return; }
   quickMode='add'; quickEditId=null;

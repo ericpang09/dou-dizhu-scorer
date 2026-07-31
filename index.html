@@ -283,6 +283,13 @@
     <div style="width:100%;max-width:340px">
       <button class="btn btn-ghost" onclick="enterRoom(genRoomCode())">＋ 開新房間</button>
     </div>
+
+    <!-- 最近入過嘅房間 -->
+    <div id="recentRooms" style="width:100%;max-width:340px;margin-top:20px;display:none">
+      <p class="sl" style="text-align:left;margin-bottom:8px">最近房間</p>
+      <div id="recentRoomsList"></div>
+    </div>
+
     <p class="muted" style="margin-top:24px;max-width:300px">同一條友一個房間碼，各自喺自己手機入同一個碼，記錄即時同步</p>
   </div>
 </div>
@@ -621,6 +628,29 @@ function loadLocal(){
 }
 function lastRoom(){ return localStorage.getItem(LS_PREFIX+'lastroom')||''; }
 function setLastRoom(r){ if(r) localStorage.setItem(LS_PREFIX+'lastroom', r); }
+// 最近入過嘅房間（最多 5 個）
+function getRecentRooms(){
+  try{ return JSON.parse(localStorage.getItem(LS_PREFIX+'recentrooms')||'[]'); }catch(e){ return []; }
+}
+function addRecentRoom(code){
+  let list = getRecentRooms().filter(r=>r!==code);  // 移除舊嘅同名
+  list.unshift(code);                                 // 加最前
+  list = list.slice(0,5);                             // 最多 5 個
+  localStorage.setItem(LS_PREFIX+'recentrooms', JSON.stringify(list));
+}
+function renderRecentRooms(){
+  const list = getRecentRooms();
+  const el = $('recentRooms'), listEl = $('recentRoomsList');
+  if(!list.length){ el.style.display='none'; return; }
+  el.style.display='block';
+  listEl.innerHTML = list.map(code=>
+    `<div class="glass" onclick="enterRoom('${code}')" style="display:flex;align-items:center;gap:11px;padding:13px 15px;margin-bottom:8px;cursor:pointer;border-radius:14px">
+      <span style="font-size:20px">🏠</span>
+      <span style="flex:1;font-size:17px;font-weight:700;letter-spacing:1px">${code}</span>
+      <span style="color:var(--txt-3);font-size:13px">入房 →</span>
+    </div>`
+  ).join('');
+}
 
 /* =========================================================================
    Supabase 同步（房間制：單局推送 + 即時訂閱）
@@ -1228,10 +1258,10 @@ async function enterRoom(code){
     await sb.from('rooms').upsert({id:code,created_at:Date.now(),last_activity:Date.now()});
     toast('已開新房間 '+code);
   }
-  room = code; setLastRoom(code);
+  room = code; setLastRoom(code); addRecentRoom(code);
   loadLocal();                           // 載入本房本機資料（即時顯示）
   initRoom();                            // 顯示主介面 + 拉雲端 + 訂閱
-  toast(isExistingRoom ? '已入房 '+code+' ✓' : '已開新房間 '+code);
+  toast(roomExists ? '已入房 '+code+' ✓' : '已開新房間 '+code);
 }
 function initRoom(){
   $('roomScreen').classList.add('hidden');
@@ -1263,6 +1293,7 @@ function leaveRoom(){
   $('appMain').classList.add('hidden');
   $('roomScreen').classList.remove('hidden');
   $('roomInput').value='';
+  renderRecentRooms();
   updateSyncDot();
 }
 // 複製房間碼（純號碼）
@@ -1317,6 +1348,7 @@ function shareRoom(){
   } else {
     $('roomScreen').classList.remove('hidden');
     $('appMain').classList.add('hidden');
+    renderRecentRooms();
   }
 })();
 

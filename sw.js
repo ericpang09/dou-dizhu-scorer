@@ -1,13 +1,13 @@
-// Service Worker — 離線快取（cache-first，背景更新）
-const CACHE = 'dou-dizhu-v2';
+// Service Worker — 離線快取（network-first，避免 Safari redirect 問題）
+const CACHE = 'dou-dizhu-v3';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
   'icons/icon-192.png',
   'icons/icon-256.png',
-  'icons/icon-512.png'
+  'icons/icon-512.png',
+  'icons/apple-touch-icon.png'
 ];
 
 // 安裝：預先快取核心檔案
@@ -17,7 +17,7 @@ self.addEventListener('install', e => {
   );
 });
 
-// 啟用：清舊快取
+// 啟用：清舊快取 + 接管
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys => Promise.all(
@@ -26,25 +26,25 @@ self.addEventListener('activate', e => {
   );
 });
 
-// 請求：cache-first，背景更新
+// 請求：network-first（優先用最新，離線先用 cache）
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
-  // 同源 + Supabase CDN 才攔截；其他（API 資料）直接上網
   const url = new URL(req.url);
-  const isAsset = url.origin === location.origin || url.href.includes('cdn.jsdelivr.net');
-  if (!isAsset) return;  // Supabase API 請求唔快取，保證資料最新
+  // 淨係處理同源請求；Supabase API + CDN 直接放行（唔攔截）
+  if (url.origin !== location.origin) return;
 
   e.respondWith(
-    caches.match(req).then(cached => {
-      const fetchPromise = fetch(req).then(res => {
-        if (res && res.status === 200) {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(req, clone));
-        }
-        return res;
-      }).catch(() => cached);
-      return cached || fetchPromise;
+    fetch(req).then(res => {
+      // 只快取正常（200）同基本類型嘅 response，唔快取 redirect/opaque
+      if (res && res.status === 200 && res.type === 'basic') {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(req, clone));
+      }
+      return res;
+    }).catch(() => {
+      // 離線：用 cache
+      return caches.match(req).then(cached => cached || caches.match('./index.html'));
     })
   );
 });

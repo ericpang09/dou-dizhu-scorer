@@ -159,6 +159,7 @@
   .rec{border-radius:var(--radius-sm);margin-bottom:9px;overflow:hidden}
   .rec-h{display:flex;align-items:center;gap:11px;padding:13px 15px;cursor:pointer}
   .rec-dt{font-size:11px;color:var(--txt-3);font-weight:500;min-width:40px;line-height:1.25}
+  .rec-no{width:30px;height:30px;border-radius:50%;background:var(--glass);border:1px solid var(--glass-brd);display:grid;place-items:center;font-size:13px;font-weight:800;color:var(--txt-2);flex-shrink:0}
   .rec-mid{flex:1;min-width:0}
   .rec-roles{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rec-meta{font-size:11.5px;color:var(--txt-3);margin-top:2px}
@@ -968,7 +969,7 @@ function resetForm(){
 function renderRecords(){
   const el=$('recordsList');
   if(!state.games.length){ el.innerHTML='<div class="empty"><div class="ei">📊</div><p>未有紀錄</p><p style="font-size:13px">去「記局」記低第一局</p></div>'; return; }
-  el.innerHTML=state.games.map(g=>{
+  el.innerHTML=state.games.map((g,idx)=>{
     const c=calcGame(g);
     const name=id=>(state.players.find(p=>p.id===id)||{}).name||'(已刪)';
     const lw=g.winner==='landlord';
@@ -977,8 +978,19 @@ function renderRecords(){
     const fDelta=c.delta[g.farmerAId];        // 農民贏輸（含正負號）
     const lPos=lDelta>=0;
     const fPos=fDelta>=0;
+  el.innerHTML=state.games.map((g,idx)=>{
+    const c=calcGame(g);
+    const name=id=>(state.players.find(p=>p.id===id)||{}).name||'(已刪)';
+    const lw=g.winner==='landlord';
+    const mults=(g.multipliers||[]).map(m=>m.label).join('、')||'無';
+    const lDelta=c.delta[g.landlordId];       // 地主贏輸（含正負號）
+    const fDelta=c.delta[g.farmerAId];        // 農民贏輸（含正負號）
+    const lPos=lDelta>=0;
+    const fPos=fDelta>=0;
+    const gameNo = state.games.length - idx;   // 局數（最舊=1，最新=最大）
     return `<div class="rec glass" data-id="${g.id}">
       <div class="rec-h" onclick="toggleRec('${g.id}')">
+        <div class="rec-no">${gameNo}</div>
         <div class="rec-dt">${fmtDate(g.date)}</div>
         <div class="rec-mid">
           <div class="rec-roles"><span style="color:var(--yellow)">👑</span> ${name(g.landlordId)} <span style="color:var(--txt-3);font-weight:400">vs</span> <span style="color:var(--green)">🌾</span> ${name(g.farmerAId)}、${name(g.farmerBId)}</div>

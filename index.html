@@ -34,10 +34,11 @@
     --sf:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI","PingFang HK","Microsoft JhengHei",system-ui,sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html{margin:0;padding:0;height:100%;overflow:hidden;overscroll-behavior:none;background:#0a0a14}
-  body{margin:0;padding:0;height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:none;-webkit-overflow-scrolling:touch;background:#0a0a14}
+  html{margin:0;padding:0;overscroll-behavior:none;background:#0a0a14}
   body{
-    font-family:var(--sf); color:var(--txt); min-height:100vh;
+    margin:0;padding:0;
+    font-family:var(--sf); color:var(--txt); min-height:100vh;overflow-x:hidden;
+    overscroll-behavior-y:none;-webkit-overflow-scrolling:touch;
     background:
       radial-gradient(1000px 700px at 80% -10%, rgba(10,132,255,.16), transparent 55%),
       radial-gradient(900px 600px at 0% 100%, rgba(48,209,88,.12), transparent 55%),
@@ -318,6 +319,10 @@
     <div class="pick-grid" id="pickGrid"></div>
 
     <div id="addForm" class="hidden" style="margin-top:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <button class="btn btn-ghost" id="repickBtn" style="width:auto;padding:10px 14px;font-size:13px">← 揀過</button>
+        <span class="muted" id="pickSummary"></span>
+      </div>
       <div class="row glass" style="margin-bottom:9px">
         <span class="lbl">底分</span>
         <div class="stepper">
@@ -807,7 +812,16 @@ function renderPick(){
 function toggleForm(){
   const ready = formState.landlordId && formState.farmerAId && formState.farmerBId;
   $('addForm').classList.toggle('hidden', !ready);
+  if(ready){
+    const name=id=>(state.players.find(p=>p.id===id)||{}).name||'?';
+    $('pickSummary').textContent = '👑'+name(formState.landlordId)+' vs 🌾'+name(formState.farmerAId)+'、'+name(formState.farmerBId);
+  }
 }
+// 重新揀人（清除地主/農民，返去揀人卡片）
+$('repickBtn').onclick=()=>{
+  formState.landlordId=''; formState.farmerAId=''; formState.farmerBId='';
+  renderPick(); toggleForm(); renderPreview();
+};
 function checkPlayersAvailable(){
   const np=state.players.length;
   $('needPlayers').classList.toggle('hidden', np>=3);

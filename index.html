@@ -291,8 +291,8 @@
     </div>
 
     <p class="muted" style="margin-top:24px;max-width:300px">同一條友一個房間碼，各自喺自己手機入同一個碼，記錄即時同步</p>
-    <!-- Android 下載 App 按鈕（淨係 Android 顯示）-->
-    <a id="androidDl" href="https://github.com/ericpang09/dou-dizhu-scorer/releases/download/v1.0.0/app-debug.apk" style="display:none;margin-top:16px;font-size:12px;color:var(--txt-3);text-decoration:underline">⬇ 下載 Android App</a>
+    <!-- Android 下載 App 按鈕 -->
+    <a id="androidDl" href="https://github.com/ericpang09/dou-dizhu-scorer/releases/download/v1.0.0/app-debug.apk" style="margin-top:18px;padding:11px 20px;border-radius:12px;background:var(--glass);border:1px solid var(--glass-brd);color:var(--txt);font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:7px">⬇ 下載 Android App（APK）</a>
   </div>
 </div>
 
@@ -1352,8 +1352,10 @@ function shareRoom(){
     $('appMain').classList.add('hidden');
     renderRecentRooms();
   }
-  // Android 先顯示下載 App 按鈕
-  if(/android/i.test(navigator.userAgent)){ $('androidDl').style.display='inline-block'; }
+  // Android 機：將下載按鈕放高一級（更顯眼）
+  if(/android/i.test(navigator.userAgent)){
+    const dl=$('androidDl'); dl.style.background='rgba(48,209,88,.2)'; dl.style.borderColor='var(--green)'; dl.style.color='var(--green)';
+  }
 })();
 
 // PWA 安裝提示

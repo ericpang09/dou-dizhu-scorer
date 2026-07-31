@@ -756,7 +756,7 @@ document.querySelectorAll('.segctl button').forEach(t=>t.onclick=()=>switchTab(t
 function renderStandings(){
   const el = $('standings'); const ov = overview();
   if(!state.players.length){ el.innerHTML=''; return; }
-  const sorted=[...state.players].sort((a,b)=>(ov[b.id]?.total||0)-(ov[a.id]?.total||0));
+  const sorted=[...state.players].sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   el.innerHTML = sorted.map(p=>{
     const s=ov[p.id]||{total:0,games:0,win:0};
     const cls = s.total>0?'pos':s.total<0?'neg':'zero';
@@ -989,7 +989,7 @@ let quickPlayers = [];      // 當前快速記局用嘅 3 個玩家
 function openSettle(){
   if(!state.players.length || !state.games.length){ toast('未有紀錄可結算',true); return; }
   const ov = overview();
-  const sorted = [...state.players].sort((a,b)=>(ov[b.id]?.total||0)-(ov[a.id]?.total||0));
+  const sorted = [...state.players].sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   // 找最大贏家同輸家
   const totals = sorted.map(p=>ov[p.id]?.total||0);
   const maxWin = Math.max(...totals);
@@ -1127,7 +1127,7 @@ function cancelEdit(){
 /* ---- Stats ---- */
 function renderStats(){
   const ov=overview();
-  const sorted=[...state.players].sort((a,b)=>(ov[b.id]?.total||0)-(ov[a.id]?.total||0));
+  const sorted=[...state.players].sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   $('overviewStats').innerHTML=sorted.length? sorted.map(p=>{
     const s=ov[p.id]||{total:0,games:0,win:0}; const cls=s.total>0?'pos':s.total<0?'neg':'';
     return `<div class="stat glass">
@@ -1139,7 +1139,7 @@ function renderStats(){
 
   const ls=landlordStats();
   const lSorted=[...state.players].filter(p=>(ls[p.id]?.games||0)>0)
-    .sort((a,b)=>(ls[b.id].wins/ls[b.id].games)-(ls[a.id].wins/ls[a.id].games));
+    .sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   $('landlordStats').innerHTML=lSorted.length? lSorted.map(p=>{
     const s=ls[p.id]; const rate=s.games?Math.round(s.wins/s.games*100):0;
     return `<div class="stat glass">

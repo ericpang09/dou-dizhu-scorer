@@ -1203,16 +1203,16 @@ function refreshView(){
 async function enterRoom(code){
   code = (code||'').toUpperCase().trim().replace(/\s|-/g,'');   // 去空格同連字號
   if(code.length<4){ toast('房間碼至少 4 個字',true); return; }
-  // 檢查呢間房喺雲端有冇資料（避免打錯碼入空房）
-  let isExistingRoom = false;
+  // 檢查呢間房喺雲端存唔存在（check rooms 表，唔係 players）
+  let roomExists = false;
   if(syncEnabled&&sb){
-    const { data:existing } = await sb.from('players').select('id').eq('room_id',code).limit(1);
-    isExistingRoom = (existing&&existing.length>0);
+    const { data:existing } = await sb.from('rooms').select('id').eq('id',code).limit(1);
+    roomExists = (existing&&existing.length>0);
   }
-  // 如果係新房，確認建立
-  if(!isExistingRoom && syncEnabled&&sb){
-    if(!confirm('房間「'+code+'」係空嘅（未有記錄）。\n確定冇打錯碼？撳「確定」開新房間。')) return;
+  // 如果房間唔存在 → 建立佢
+  if(!roomExists && syncEnabled&&sb){
     await sb.from('rooms').upsert({id:code,created_at:Date.now()});
+    toast('已開新房間 '+code);
   }
   room = code; setLastRoom(code);
   loadLocal();                           // 載入本房本機資料（即時顯示）

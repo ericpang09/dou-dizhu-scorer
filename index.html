@@ -34,7 +34,8 @@
     --sf:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI","PingFang HK","Microsoft JhengHei",system-ui,sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0;height:100%}
+  html{margin:0;padding:0;height:100%;overflow:hidden;overscroll-behavior:none;background:#0a0a14}
+  body{margin:0;padding:0;height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:none;-webkit-overflow-scrolling:touch;background:#0a0a14}
   body{
     font-family:var(--sf); color:var(--txt); min-height:100vh;
     background:
@@ -1198,6 +1199,21 @@ function shareRoom(){
 }
 
 // 自動由 URL 入房 / 記住上次房間
+// 防止 iOS Safari rubber band overscroll（令網頁似原生 App 鎖死）
+(function(){
+  let startY=0;
+  document.addEventListener('touchstart',e=>{ startY=e.touches[0].clientY; }, {passive:true});
+  document.addEventListener('touchmove',e=>{
+    const el=e.target.closest('.stand,.rec-b,.sheet,.modal-bg');
+    // 只允許可scroll元素（積分榜/彈窗）內部滾動
+    if(el) return;
+    const y=e.touches[0].clientY;
+    const atTop = window.scrollY<=0;
+    const atBottom = window.scrollY+window.innerHeight>=document.body.scrollHeight;
+    if((atTop && y>startY) || (atBottom && y<startY)){ e.preventDefault(); }
+  }, {passive:false});
+})();
+
 (function bootstrap(){
   initSupabase();
   const urlRoom = new URLSearchParams(location.search).get('room');

@@ -636,7 +636,12 @@ function initSupabase(){
 // 推一個玩家上雲
 async function pushPlayer(p){
   if(!syncEnabled||!sb||!room) return;
-  try{ await sb.from('players').upsert({id:p.id,room_id:room,name:p.name,created_at:p.createdAt}); }catch(e){console.warn('pushPlayer',e);}
+  try{ await sb.from('players').upsert({id:p.id,room_id:room,name:p.name,created_at:p.createdAt}); touchRoom(); }catch(e){console.warn('pushPlayer',e);}
+}
+// 更新房間最後活動時間（俾自動清理用）
+function touchRoom(){
+  if(!syncEnabled||!sb||!room) return;
+  sb.from('rooms').update({last_activity:Date.now()}).eq('id',room).then(()=>{}, ()=>{});
 }
 // 推一局上雲
 async function pushGame(g){
@@ -645,7 +650,7 @@ async function pushGame(g){
     id:g.id, room_id:room, date:g.date, landlord_id:g.landlordId, farmer_a_id:g.farmerAId,
     farmer_b_id:g.farmerBId, base_score:g.baseScore, multipliers:g.multipliers||[],
     spring:g.spring, winner:g.winner, note: g._quickScores ? '__QS__'+JSON.stringify(g._quickScores)+(g.note?'|||'+g.note:'') : (g.note||'')
-  }); }catch(e){console.warn('pushGame',e);}
+  }); touchRoom(); }catch(e){console.warn('pushGame',e);}
 }
 // 刪一局
 async function deleteGameCloud(id){
@@ -1225,7 +1230,7 @@ async function enterRoom(code){
   }
   // 如果房間唔存在 → 建立佢
   if(!roomExists && syncEnabled&&sb){
-    await sb.from('rooms').upsert({id:code,created_at:Date.now()});
+    await sb.from('rooms').upsert({id:code,created_at:Date.now(),last_activity:Date.now()});
     toast('已開新房間 '+code);
   }
   room = code; setLastRoom(code);

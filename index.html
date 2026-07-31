@@ -1148,15 +1148,21 @@ function refreshView(){
 async function enterRoom(code){
   code = (code||'').toUpperCase().trim();
   if(code.length<4){ toast('房間碼至少 4 個字',true); return; }
-  // 確保房間記錄存在（冇就建）
+  // 檢查呢間房喺雲端有冇資料（避免打錯碼入空房）
+  let isExistingRoom = false;
   if(syncEnabled&&sb){
-    const { data } = await sb.from('rooms').select('id').eq('id',code).maybeSingle();
-    if(!data){ await sb.from('rooms').insert({id:code,created_at:Date.now()}); }
+    const { data:existing } = await sb.from('players').select('id').eq('room_id',code).limit(1);
+    isExistingRoom = (existing&&existing.length>0);
+  }
+  // 如果係新房，確認建立
+  if(!isExistingRoom && syncEnabled&&sb){
+    if(!confirm('房間「'+code+'」係空嘅（未有記錄）。\n確定冇打錯碼？撳「確定」開新房間。')) return;
+    await sb.from('rooms').upsert({id:code,created_at:Date.now()});
   }
   room = code; setLastRoom(code);
   loadLocal();                           // 載入本房本機資料（即時顯示）
   initRoom();                            // 顯示主介面 + 拉雲端 + 訂閱
-  toast('已入房 '+code);
+  toast(isExistingRoom ? '已入房 '+code+' ✓' : '已開新房間 '+code);
 }
 function initRoom(){
   $('roomScreen').classList.add('hidden');

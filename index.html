@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a0a14">
+<!-- CSP：允許 Supabase REST + WebSocket（令 App 版即時同步 work）-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline';">
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1049,10 +1051,21 @@ function initRoom(){
   refreshAll();
   pullRoom().then(()=>{ refreshAll(); renderRecords(); renderStats(); });
   subscribeRoom();
+  startPolling();      // App 版 WebSocket 連唔到嘅後備方案
   updateSyncDot();
+}
+// 後備：每 8 秒拉一次最新（App 版 WebSocket 可能俾擋，polling 保證同步）
+let pollingTimer = null;
+function startPolling(){
+  stopPolling();
+  pollingTimer = setInterval(()=>{ pullRoom().then(refreshView); }, 8000);
+}
+function stopPolling(){
+  if(pollingTimer){ clearInterval(pollingTimer); pollingTimer=null; }
 }
 function leaveRoom(){
   if(realtimeSub){ try{realtimeSub.unsubscribe();}catch(e){} realtimeSub=null; }
+  stopPolling();
   room=''; localStorage.removeItem(LS_PREFIX+'lastroom');
   state={players:[],games:[],defaultBaseScore:5};
   $('appMain').classList.add('hidden');

@@ -626,15 +626,15 @@ async function pullRoom(){
   }catch(e){ console.warn('pull fail', e); }
   syncing=false; updateSyncDot();
 }
-// 即時訂閱：同房有人改動即刻刷新
+// 即時訂閱：同房有人改動即刻刷新（用 refreshView 刷新埋紀錄/統計頁）
 function subscribeRoom(){
   if(!syncEnabled||!sb||!room) return;
   if(realtimeSub){ try{realtimeSub.unsubscribe();}catch(e){} }
   realtimeSub = sb.channel('room_'+room)
     .on('postgres_changes',{event:'*',schema:'public',table:'games',filter:'room_id=eq.'+room},
-      ()=>{ pullRoom().then(refreshAll); })
+      ()=>{ pullRoom().then(refreshView); })
     .on('postgres_changes',{event:'*',schema:'public',table:'players',filter:'room_id=eq.'+room},
-      ()=>{ pullRoom().then(refreshAll); })
+      ()=>{ pullRoom().then(refreshView); })
     .subscribe();
 }
 function updateSyncDot(){

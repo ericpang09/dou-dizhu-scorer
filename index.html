@@ -329,7 +329,11 @@
         <span class="ico">💥</span>
         <div class="mlbl"><div class="t">炸彈</div><div class="d">每個 ×2，可多個</div></div>
         <span class="mx" id="bombX">×1</span>
-        <div class="nums" id="bombNums"></div>
+        <div class="stepper">
+          <button id="bombMinus">−</button>
+          <span class="n" id="bombN">0</span>
+          <button id="bombPlus">＋</button>
+        </div>
       </div>
       <div class="row glass mrow">
         <span class="ico">🚀</span>
@@ -341,7 +345,11 @@
         <span class="ico">🤚</span>
         <div class="mlbl"><div class="t">搶地主</div><div class="d">每次搶 ×2，可多次</div></div>
         <span class="mx" id="grabX">×1</span>
-        <div class="nums" id="grabNums"></div>
+        <div class="stepper">
+          <button id="grabMinus">−</button>
+          <span class="n" id="grabN">0</span>
+          <button id="grabPlus">＋</button>
+        </div>
       </div>
       <div class="chips" id="customChips" style="margin-top:9px"></div>
       <div style="display:flex;gap:8px;margin-top:9px">
@@ -764,19 +772,14 @@ $('f_note').oninput=e=>formState.note=e.target.value;
 // 倍數：炸彈/搶地主計數器
 function bombMult(){ return Math.pow(2,formState.bombCount); }
 function grabMult(){ return Math.pow(2,formState.grabCount); }
-// 數字選擇器（0-5）
-function renderNums(elId, count, onPick){
-  const el=$(elId);
-  el.innerHTML=[0,1,2,3,4,5].map(n=>
-    `<button class="${n===count?'on':''}" onclick="${onPick}(${n})">${n}</button>`).join('');
-}
-function setBomb(n){ formState.bombCount=n; refreshMultUI(); renderPreview(); }
-function setGrab(n){ formState.grabCount=n; refreshMultUI(); renderPreview(); }
+// 加減掣
+$('bombMinus').onclick=()=>{formState.bombCount=Math.max(0,formState.bombCount-1);refreshMultUI();renderPreview();};
+$('bombPlus').onclick=()=>{formState.bombCount++;refreshMultUI();renderPreview();};
+$('grabMinus').onclick=()=>{formState.grabCount=Math.max(0,formState.grabCount-1);refreshMultUI();renderPreview();};
+$('grabPlus').onclick=()=>{formState.grabCount++;refreshMultUI();renderPreview();};
 function refreshMultUI(){
-  renderNums('bombNums',formState.bombCount,'setBomb');
-  $('bombX').textContent='×'+(formState.bombCount?bombMult():1);
-  renderNums('grabNums',formState.grabCount,'setGrab');
-  $('grabX').textContent='×'+(formState.grabCount?grabMult():1);
+  $('bombN').textContent=formState.bombCount; $('bombX').textContent='×'+(formState.bombCount?bombMult():1);
+  $('grabN').textContent=formState.grabCount; $('grabX').textContent='×'+(formState.grabCount?grabMult():1);
   $('rocketX').textContent='×'+(formState.rocket?2:1);
 }
 $('rocketTog').onclick=()=>{formState.rocket=!formState.rocket;$('rocketTog').classList.toggle('on',formState.rocket);refreshMultUI();renderPreview();};

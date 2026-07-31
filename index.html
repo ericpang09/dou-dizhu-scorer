@@ -1047,12 +1047,8 @@ function renderQuickRows(existing){
     const v = existing ? existing.delta[p.id] : 0;
     return `<div class="row glass" style="margin-bottom:8px">
       <span class="avatar" style="background:${colorFor(p.id)};width:34px;height:34px;font-size:15px">${avatarOf(p.name)}</span>
-      <div style="flex:1"><div style="font-size:15px;font-weight:600">${p.name}</div>
-        <select id="quickP${i}" style="margin-top:5px;font-size:13px;padding:8px">
-          ${state.players.map(pp=>`<option value="${pp.id}" ${pp.id===p.id?'selected':''}>${pp.name}</option>`).join('')}
-        </select>
-      </div>
-      <input type="number" id="quickV${i}" value="${v||''}" placeholder="0" style="width:90px;text-align:center;font-size:18px;font-weight:700;color:${v>=0?'var(--green)':'var(--red)'}">
+      <div style="flex:1;font-size:17px;font-weight:700">${p.name}</div>
+      <input type="number" id="quickV${i}" value="${v||''}" placeholder="0" style="width:100px;text-align:center;font-size:20px;font-weight:800;color:${v>=0?'var(--green)':'var(--red)'}">
     </div>`;
   }).join('');
   $('quickRows').innerHTML = rows;
@@ -1065,8 +1061,7 @@ function renderQuickRows(existing){
 $('quickAddBtn').onclick=openQuickAdd;
 $('quickModal').onclick=e=>{if(e.target.id==='quickModal')closeQuick();};
 $('quickSave').onclick=()=>{
-  const ids=[0,1,2].map(i=>$('quickP'+i).value);
-  if(new Set(ids).size!==3){ toast('3 個人要唔同',true); return; }
+  const ids=quickPlayers.map(p=>p.id);
   const vals=[0,1,2].map(i=>+$('quickV'+i).value||0);
   const sum=vals[0]+vals[1]+vals[2];
   if(sum!==0){ if(!confirm('三人分數加埋 = '+sum+'（唔係 0），確定儲存？')) return; }

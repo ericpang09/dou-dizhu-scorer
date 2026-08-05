@@ -31,6 +31,21 @@ jobs:
         run: npx cap copy android
 
       # ============================================================
+      #  固定 Play 版本號：versionName 跟 package.json，versionCode 用 run_number
+      #  （每次 Actions run 遞增，滿足 Play 每次上傳必須更大嘅要求）
+      # ============================================================
+      - name: Set Android versionName / versionCode
+        working-directory: android
+        run: |
+          VERSION_NAME=$(node -p "require('../package.json').version")
+          VERSION_CODE=${{ github.run_number }}
+          echo "versionName=$VERSION_NAME versionCode=$VERSION_CODE"
+          # Capacitor 預設 defaultConfig 入面有 versionCode / versionName
+          sed -i -E "s/versionCode[[:space:]]+[0-9]+/versionCode $VERSION_CODE/" app/build.gradle
+          sed -i -E "s/versionName[[:space:]]+\"[^\"]+\"/versionName \"$VERSION_NAME\"/" app/build.gradle
+          grep -E 'version(Code|Name)' app/build.gradle || true
+
+      # ============================================================
       #  Release signing（用 GitHub Secrets 入面嘅 keystore）
       #  首次跑：如果冇 KEYSTORE_BASE64 secret，會自動生一個新 keystore
       #  並上傳為 artifact 俾你下載備份，之後手動加做 Secret

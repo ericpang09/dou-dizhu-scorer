@@ -10,6 +10,7 @@ ios/
 .playwright-cli/
 aab-out/
 apk-out/
+artifacts-tmp/
 test-shots/
 test-logs/
 keystore-backup/

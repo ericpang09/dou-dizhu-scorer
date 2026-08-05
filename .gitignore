@@ -11,6 +11,7 @@ ios/
 aab-out/
 apk-out/
 artifacts-tmp/
+artifacts-latest/
 test-shots/
 test-logs/
 keystore-backup/
@@ -19,3 +20,5 @@ keystore-backup/
 keystore.properties
 store.pass
 key.pass
+runlog.txt
+runlog2.txt
